@@ -1,14 +1,7 @@
 #!/usr/bin/env python
 import rospy
 # ROS Image message
-from sensor_msgs.msg import Image
-# ROS Image message -> OpenCV2 image converter
-from cv_bridge import CvBridge, CvBridgeError
-# OpenCV2 for saving an image
-import cv2
-
-# Instantiate CvBridge
-bridge = CvBridge()
+from nav_msgs.msg import Odometry
 
 #ODOM call back
 def odometry_callback(msg):
