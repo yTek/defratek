@@ -10,6 +10,7 @@ import cv2
 # Instantiate CvBridge
 bridge = CvBridge()
 
+#ODOM call back
 def odometry_callback(msg):
     print(msg)
     
