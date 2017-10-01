@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
 	rate = rospy.Rate(3.0)
 
-	(trans,rot)=listener.lookupTransform('odom','point1',rospy.Time(0))
+	(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
 
 	while trans[1]<2
 		try:
