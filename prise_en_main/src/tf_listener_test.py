@@ -64,12 +64,16 @@ def autopilot():
 			
 		#If nothing entered on Z stay at current position
 		if not isinstance(pointZ, float):
-			pointY = trans[2]
+			pointZ = 2
 			print("Will stay on current coordinate on Z.\nIf you don't want to stay on position make sure you entered a float.")
+			
+		if pointZ<2.0:
+			pointZ = 2
+			print("Security Z must be > 2 m")
 			
 		confirm = raw_input("Do you want to go to [",pointX,",",pointY,",",pointY,"] (y/n)? (q to quit) \n")
 	
-	if confirm == "yes" || confirm == "y":
+	if confirm == "yes" or confirm == "y":
 		
 		#boolean for test position
 		onX = False
@@ -115,7 +119,7 @@ def autopilot():
 				twist.linear.z = -0.5
 				
 				else :
-				onZ=False
+				onZ=True
 				
 				
 				print("twist: ", twist)				
