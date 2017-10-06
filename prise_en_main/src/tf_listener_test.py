@@ -43,9 +43,9 @@ def autopilot():
 	#Allowed error on position
 	epsilon=0.5
 	
-	confirm='n'
+	confirm="n"
 	
-	while confirm == 'n' or confirm =='no'
+	while confirm == "n" or confirm =="no":
 		print("Enter a [x;y;z] coordinate:\n")
 		
 		pointX = raw_input("X: ? (enter stay to 'stay' on current coordinate)\n")
@@ -93,33 +93,33 @@ def autopilot():
 				
 				#Movement condition on X
 				if trans[0] < pointX-epsilon:
-				twist.linear.x = 0.5
+					twist.linear.x = 0.5
 				
 				elif trans[0] > pointX+epsilon:
-				twist.linear.x = -0.5
+					twist.linear.x = -0.5
 				
-				else
-				onX=True
+				else:
+					onX=True
 				
 				#Movement condition on Y
 				if trans[1] < pointY-epsilon:
-				twist.linear.y = 0.5
+					twist.linear.y = 0.5
 				
 				elif trans[1] > pointY+epsilon:
-				twist.linear.y = -0.5
+					twist.linear.y = -0.5
 				
 				else :
-				onY=True
+					onY=True
 				
 				#Movement condition on Z
 				if trans[2] < pointZ-epsilon :
-				twist.linear.z = 0.5
+					twist.linear.z = 0.5
 				
 				if trans[2] > pointZ+epsilon :
-				twist.linear.z = -0.5
+					twist.linear.z = -0.5
 				
 				else :
-				onZ=True
+					onZ=True
 				
 				
 				print("twist: ", twist)				
