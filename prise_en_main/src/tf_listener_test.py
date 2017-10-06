@@ -71,7 +71,8 @@ def autopilot():
 			pointZ = 2
 			print("Security Z must be > 2 m")
 			
-		confirm = raw_input("Do you want to go to [",pointX,",",pointY,",",pointY,"] (y/n)? (q to quit) \n")
+		print("The point you want to go is [",pointX,",",pointY,",",pointY,"]")
+		confirm = raw_input("Confirm the destination ? yes (y) or no (n). q to leave")
 	
 	if confirm == "yes" or confirm == "y":
 		
