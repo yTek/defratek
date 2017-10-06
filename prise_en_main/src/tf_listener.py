@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
 	(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
 
-	while trans[1]<2
+	while trans[1]<2:
 		try:
 			(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
 			twist = Twist()
