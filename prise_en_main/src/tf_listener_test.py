@@ -39,7 +39,9 @@ def autopilot():
 	rate = rospy.Rate(3.0)
 
 	(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
-	
+    (transCam,rotCam)=listenerCam.lookupTransform('base_link','camera_base_link',rospy.Time(0))
+
+    
 	#Allowed error on position
 	epsilon=0.5
 	
@@ -90,6 +92,7 @@ def autopilot():
 
 				print(onX," --- ", onY," ---- ", onZ) 
 				(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
+                (transCam,rotCam)=listenerCam.lookupTransform('base_link','camera_base_link',rospy.Time(0))
 				
 				twist = Twist()
 				
@@ -146,10 +149,12 @@ def autopilot():
 				
 				continue
 
-			print("trans: ",trans)
+			print("trans odom: ",trans)
+            print("trans camera: ",transCam)
 			print("rot: ", rot)
 		
 		(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
+        (transCam,rotCam)=listenerCam.lookupTransform('base_link','camera_base_link',rospy.Time(0))
 		print("Arrived at target: [",trans[0],",",trans[1],",",trans[2],"] !")
 
 def getKey():
@@ -167,6 +172,7 @@ if __name__=="__main__":
 	pubTakeoff = rospy.Publisher('/bebop/takeoff', Empty, queue_size = 1)
 	pubLand = rospy.Publisher('/bebop/land', Empty, queue_size = 1)
 	listener = tf.TransformListener()
+    listenerCam= tf.TransformListener()
 
 	rospy.init_node('bebop_tf_listener', anonymous= True, disable_signals=True)
 	
