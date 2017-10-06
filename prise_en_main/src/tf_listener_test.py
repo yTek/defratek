@@ -95,32 +95,41 @@ def autopilot():
 				#Movement condition on X
 				if trans[0] < pointX-epsilon:
 					twist.linear.x = 0.5
+					print("x=",twist.linear.x,"\n")
 				
 				elif trans[0] > pointX+epsilon:
 					twist.linear.x = -0.5
+					print("x=",twist.linear.x,"\n")
 				
 				else:
 					onX=True
+					print("y=",twist.linear.y,"\n")
 				
 				#Movement condition on Y
 				if trans[1] < pointY-epsilon:
 					twist.linear.y = 0.5
+					print("y=",twist.linear.y,"\n")
 				
 				elif trans[1] > pointY+epsilon:
 					twist.linear.y = -0.5
+					print("y=",twist.linear.y,"\n")
 				
 				else :
 					onY=True
+					print("y=",twist.linear.y,"\n")
 				
 				#Movement condition on Z
 				if trans[2] < pointZ-epsilon :
 					twist.linear.z = 0.5
+					print("z=",twist.linear.z,"\n")
 				
 				if trans[2] > pointZ+epsilon :
 					twist.linear.z = -0.5
+					print("z=",twist.linear.z,"\n")
 				
 				else :
 					onZ=True
+					print("z=",twist.linear.z,"\n")
 				
 				
 				print("twist: ", twist)				
