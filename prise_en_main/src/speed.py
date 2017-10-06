@@ -4,7 +4,7 @@ import rospy
 from nav_msgs.msg import Odometry
 
 #ODOM call back
-def odometry_callback(msg):
+def speed_callback(msg):
     print(msg)
     
 def listener():
@@ -16,7 +16,7 @@ def listener():
     # run simultaneously.
     rospy.init_node('odometry_listener', anonymous=True)
 
-    rospy.Subscriber("/bebop/odom", Odometry, odometry_callback)
+    rospy.Subscriber("/bebop/states/ardrone3/PilotingState/SpeedChanged", bebop_msgs::Ardrone3PilotingStateSpeedChanged, speed_callback)
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
