@@ -41,16 +41,16 @@ def autopilot():
 	(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
 	
 	#Allowed error on position
-	epsilon=1
+	epsilon=0.5
 	
 	confirm="n"
 	
 	while confirm == "n" or confirm =="no":
 		print("Enter a [x;y;z] coordinate:\n")
 		
-		pointX = raw_input("X: ? (enter stay to 'stay' on current coordinate)\n")
-		pointY = raw_input("Y: ? (enter stay to 'stay' on current coordinate)\n")
-		pointZ = raw_input("Z: ? (enter stay to 'stay' on current coordinate)\n")
+		pointX = float(raw_input("X: ? (enter stay to 'stay' on current coordinate)\n"))
+		pointY = float(raw_input("Y: ? (enter stay to 'stay' on current coordinate)\n"))
+		pointZ = float(raw_input("Z: ? (enter stay to 'stay' on current coordinate)\n"))
 		"""
 		#If nothing entered on X stay at current position
 		if not isinstance(pointX, float):
@@ -99,11 +99,11 @@ def autopilot():
 				
 				#Movement condition on X
 				if trans[0] < pointX-epsilon:
-					twist.linear.x = 0.1
+					twist.linear.x = 0.3
 					print("x=",twist.linear.x,"\n")
 				
 				elif trans[0] > pointX+epsilon:
-					twist.linear.x = -0.1
+					twist.linear.x = -0.3
 					print("x=",twist.linear.x,"\n")
 				
 				else:
@@ -112,11 +112,11 @@ def autopilot():
 				
 				#Movement condition on Y
 				if trans[1] < pointY-epsilon:
-					twist.linear.y = 0.1
+					twist.linear.y = 0.3
 					print("y=",twist.linear.y,"\n")
 				
 				elif trans[1] > pointY+epsilon:
-					twist.linear.y = -0.1
+					twist.linear.y = -0.3
 					print("y=",twist.linear.y,"\n")
 				
 				else :
@@ -125,11 +125,11 @@ def autopilot():
 				
 				#Movement condition on Z
 				if trans[2] < pointZ-epsilon :
-					twist.linear.z = 0.1
+					twist.linear.z = 0.3
 					print("z=",twist.linear.z,"\n")
 				
 				if trans[2] > pointZ+epsilon :
-					twist.linear.z = -0.1
+					twist.linear.z = -0.3
 					print("z=",twist.linear.z,"\n")
 				
 				else :
@@ -140,7 +140,6 @@ def autopilot():
 				print("twist: ", twist)				
 				pub.publish(twist)
 				print(onX," --- ", onY," ---- ", onZ)
-				time.sleep(1)
 
 			except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
 
@@ -184,7 +183,7 @@ if __name__=="__main__":
 		status = 0.0
 
 		try:
-			time.sleep(5)
+			time.sleep(3)
 			autopilot()
 
 		except KeyboardInterrupt:
