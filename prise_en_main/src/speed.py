@@ -1,11 +1,24 @@
 #!/usr/bin/env python
 import rospy
+
+import time 
+
 # ROS Image message
 from bebop_msgs.msg import Ardrone3PilotingStateSpeedChanged
 
+montemps=time.time()
+
 #ODOM call back
 def speed_callback(msg):
+	y=time.time()-montemps
+	print("Time: ", y)
     print(msg)
+	speedX=msg.speedX
+	speedY=msg.speedY
+	speedZ=msg.speedZ
+	
+	
+	
     
 def listener():
 
