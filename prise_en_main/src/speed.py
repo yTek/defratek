@@ -5,6 +5,7 @@ import time
 
 # ROS Image message
 from bebop_msgs.msg import Ardrone3PilotingStateSpeedChanged
+from bebop_msgs.msg import Ardrone3PilotingStateAltitudeChanged
 
 montemps=time.time()
 
@@ -16,10 +17,12 @@ def speed_callback(msg):
 	speedX=msg.speedX
 	speedY=msg.speedY
 	speedZ=msg.speedZ
-	
-	
-	
-    
+		
+#ODOM call back
+def altitude_callback(msg):
+	print("Altitude: ")
+    print(msg)
+
 def listener():
 
     # In ROS, nodes are uniquely named. If two nodes with the same
@@ -30,7 +33,9 @@ def listener():
     rospy.init_node('speed_listener', anonymous=True)
 
     rospy.Subscriber("/bebop/states/ardrone3/PilotingState/SpeedChanged", Ardrone3PilotingStateSpeedChanged, speed_callback)
-
+	rospy.Subscriber("/bebop/states/ardrone3/PilotingState/AltitudeChanged", Ardrone3PilotingStateAltitudeChanged, altitude_callback)
+	
+	
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
 
