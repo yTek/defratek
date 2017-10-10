@@ -18,7 +18,7 @@ if __name__ == '__main__':
 	while 1:
 		try:
 			(trans,rot)=listener.lookupTransform('base_link','camera_base_link',rospy.Time(0))
-            time.sleep(1)
+			time.sleep(1)
 
 		except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
 			
