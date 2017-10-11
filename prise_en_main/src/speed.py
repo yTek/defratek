@@ -8,16 +8,17 @@ from bebop_msgs.msg import Ardrone3PilotingStateSpeedChanged
 from bebop_msgs.msg import Ardrone3PilotingStateAltitudeChanged
 
 last_time=time.time()
-my_pos=(0.0,0.0,0.0)
+my_pos=[0.0,0.0,0.0]
 
 #ODOM call back
 def speed_callback(msg):
 	
-	new_time=time.time()-last_time
+	new_time=time.time()
 
 	delta_time=new_time-last_time
 
-    print("Speed: ",msg)
+	print("-----------------------------------------------")
+	print("Speed: x: ",msg.speedX, " y:",msg.speedY, "z:",msg.speedZ)
 
 	speedX=msg.speedX
 	deltaX=msg.speedX*delta_time
@@ -40,8 +41,7 @@ def update_pos(deltaX,deltaY,deltaZ):
 
 #ODOM call back
 def altitude_callback(msg):
-	print("Altitude: ")
-    print(msg)
+	print("Altitude: ",msg.altitude)
 
 def listener():
 
@@ -50,15 +50,15 @@ def listener():
     # anonymous=True flag means that rospy will choose a unique
     # name for our 'listener' node so that multiple listeners can
     # run simultaneously.
-    rospy.init_node('speed_listener', anonymous=True)
+	rospy.init_node('speed_listener', anonymous=True)
 
-    rospy.Subscriber("/bebop/states/ardrone3/PilotingState/SpeedChanged", Ardrone3PilotingStateSpeedChanged, speed_callback)
+	rospy.Subscriber("/bebop/states/ardrone3/PilotingState/SpeedChanged", Ardrone3PilotingStateSpeedChanged, speed_callback)
 	
 	rospy.Subscriber("/bebop/states/ardrone3/PilotingState/AltitudeChanged", Ardrone3PilotingStateAltitudeChanged, altitude_callback)
 	
 	
     # spin() simply keeps python from exiting until this node is stopped
-    rospy.spin()
+	rospy.spin()
 
 if __name__ == '__main__':
-    listener()
+	listener()
