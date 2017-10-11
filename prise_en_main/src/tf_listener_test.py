@@ -70,8 +70,8 @@ def autopilot():
 			print("Will stay on current coordinate on Z.\nIf you don't want to stay on position make sure you entered a float.")
 		"""
 		if pointZ<2.0:
-			pointZ = 2
-			print("Security Z must be > 2 m")
+			pointZ = 1
+			print("Security Z must be > 1 m")
 			
 		print("The point you want to go is [",pointX,",",pointY,",",pointZ,"]")
 		confirm = raw_input("Confirm the destination ? yes (y) or no (n). q to leave")
