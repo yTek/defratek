@@ -34,7 +34,7 @@ def update_pos(deltaX,deltaY,deltaZ):
 	my_pos[0]=my_pos[0]+deltaX
 	my_pos[1]=my_pos[1]+deltaY
 	my_pos[2]=my_pos[2]+deltaZ
-	print("Speed: ")
+	print("Pos: ",my_pos)
 
 
 
