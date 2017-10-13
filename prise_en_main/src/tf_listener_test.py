@@ -6,6 +6,7 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import Empty
 import sys, select, termios, tty, time
 import tf
+from math import exp
 
 msg= """Mode Manuel 
 	Commande:
@@ -33,6 +34,89 @@ mvtBindings = {
 	       }
 
 
+def goToPoint(pointX, pointY, pointZ):
+	#boolean for test position
+	onX = False
+	onY = False
+	onZ = False
+		
+	while (onX and onY and onZ) is False:
+		try:
+			#boolean for test position
+			onX = False
+			onY = False
+			onZ = False
+
+			Xcoeff=1-exp(trans[0]-pointX)
+			Ycoeff=1-exp(trans[1]-pointY)
+			Zcoeff=1-exp(trans[2]-pointZ)
+
+			print(onX," --- ", onY," ---- ", onZ) 
+			(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
+			print(Xcoeff," --- ", Ycoeff," ---- ", Zcoeff) 
+				
+			twist = Twist()
+				
+			#init twist X Y Z
+			twist.linear.x = 0.0; twist.linear.y = 0.0; twist.linear.z = 0.0
+			twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = 0.0
+				
+			#Movement condition on X
+			if trans[0] < pointX-epsilon:
+				twist.linear.x = 0.3
+				print("x=",twist.linear.x,"\n")
+				
+			elif trans[0] > pointX+epsilon:
+				twist.linear.x = -0.3
+				print("x=",twist.linear.x,"\n")
+				
+			else:
+				onX=True
+				print("x=",twist.linear.x,"\n")
+				
+			#Movement condition on Y
+			if trans[1] < pointY-epsilon:
+				twist.linear.y = 0.3
+				print("y=",twist.linear.y,"\n")
+				
+			elif trans[1] > pointY+epsilon:
+				twist.linear.y = -0.3
+				print("y=",twist.linear.y,"\n")
+				
+			else :
+				onY=True
+				print("y=",twist.linear.y,"\n")
+				
+			#Movement condition on Z
+			if trans[2] < pointZ-epsilon :
+				twist.linear.z = 0.3
+				print("z=",twist.linear.z,"\n")
+				
+			if trans[2] > pointZ+epsilon :
+				twist.linear.z = -0.3
+				print("z=",twist.linear.z,"\n")
+				
+			else :
+				onZ=True
+				print("z=",twist.linear.z,"\n")
+				
+				
+			print("twist: ", twist)				
+			pub.publish(twist)
+			print(onX," --- ", onY," ---- ", onZ)
+
+		except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+
+				
+			continue
+
+		print("trans odom: ",trans)
+		print("trans camera: ",transCam)
+		print("rot: ", rot)
+		
+	(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
+	return (trans,rot)
+
 def autopilot():
 
 	#Rate to send data is 3Hz
@@ -43,7 +127,7 @@ def autopilot():
 
     
 	#Allowed error on position
-	epsilon=0.5
+	epsilon=0.3
 	
 	confirm="n"
 	
@@ -78,83 +162,8 @@ def autopilot():
 	
 	if confirm == "yes" or confirm == "y":
 		
-		#boolean for test position
-		onX = False
-		onY = False
-		onZ = False
-		
-		while (onX and onY and onZ) is False:
-			try:
-				#boolean for test position
-				onX = False
-				onY = False
-				onZ = False
+		goToPoint(pointX, pointY, pointZ)
 
-				print(onX," --- ", onY," ---- ", onZ) 
-				(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
-				(transCam,rotCam)=listenerCam.lookupTransform('base_link','camera_base_link',rospy.Time(0))
-				
-				twist = Twist()
-				
-				#init twist X Y Z
-				twist.linear.x = 0.0; twist.linear.y = 0.0; twist.linear.z = 0.0
-				twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = 0.0
-				
-				#Movement condition on X
-				if trans[0] < pointX-epsilon:
-					twist.linear.x = 0.3
-					print("x=",twist.linear.x,"\n")
-				
-				elif trans[0] > pointX+epsilon:
-					twist.linear.x = -0.3
-					print("x=",twist.linear.x,"\n")
-				
-				else:
-					onX=True
-					print("x=",twist.linear.x,"\n")
-				
-				#Movement condition on Y
-				if trans[1] < pointY-epsilon:
-					twist.linear.y = 0.3
-					print("y=",twist.linear.y,"\n")
-				
-				elif trans[1] > pointY+epsilon:
-					twist.linear.y = -0.3
-					print("y=",twist.linear.y,"\n")
-				
-				else :
-					onY=True
-					print("y=",twist.linear.y,"\n")
-				
-				#Movement condition on Z
-				if trans[2] < pointZ-epsilon :
-					twist.linear.z = 0.3
-					print("z=",twist.linear.z,"\n")
-				
-				if trans[2] > pointZ+epsilon :
-					twist.linear.z = -0.3
-					print("z=",twist.linear.z,"\n")
-				
-				else :
-					onZ=True
-					print("z=",twist.linear.z,"\n")
-				
-				
-				print("twist: ", twist)				
-				pub.publish(twist)
-				print(onX," --- ", onY," ---- ", onZ)
-
-			except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-
-				
-				continue
-
-			print("trans odom: ",trans)
-			print("trans camera: ",transCam)
-			print("rot: ", rot)
-		
-		(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
-		(transCam,rotCam)=listenerCam.lookupTransform('base_link','camera_base_link',rospy.Time(0))
 		print("Arrived at target: [",trans[0],",",trans[1],",",trans[2],"] !")
 
 def getKey():
