@@ -7,6 +7,8 @@ from std_msgs.msg import Empty
 import sys, select, termios, tty, time
 import tf
 from math import exp
+import numpy as np
+import matplotlib.pyplot as plt
 
 msg= """Mode Manuel 
 	Commande:
@@ -35,6 +37,14 @@ mvtBindings = {
 
 
 def goToPoint(pointX, pointY, pointZ):
+
+	#Allowed error on position
+	epsilon=0.3
+
+	coeffValues=[]	
+
+	(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
+
 	#boolean for test position
 	onX = False
 	onY = False
@@ -42,17 +52,54 @@ def goToPoint(pointX, pointY, pointZ):
 		
 	while (onX and onY and onZ) is False:
 		try:
+			(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
 			#boolean for test position
 			onX = False
 			onY = False
 			onZ = False
+			
+			#Speed variation: 1-exp(-x)
+			Xcoeff=1-exp((trans[0]-pointX)/3)
+			Ycoeff=1-exp((trans[1]-pointY)/3)
+			Zcoeff=1-exp((trans[2]-pointZ)/3)
 
-			Xcoeff=1-exp(trans[0]-pointX)
-			Ycoeff=1-exp(trans[1]-pointY)
-			Zcoeff=1-exp(trans[2]-pointZ)
+			#Speed variation: Linear function
+			'''if pointX-trans[0]<3:
+				Xcoeff=abs((pointX-trans[2])/3)
+			else:
+				Xcoeff=1
+			if pointY-trans[1]<3:				
+				Ycoeff=abs((pointY-trans[1])/3)
+			else:
+				Ycoeff=1
+			if pointZ-trans[2]<3:
+				Zcoeff=abs((pointZ-trans[2])/3)
+			else:
+				Zcoeff=1'''
+
+			#Speed variation: Linear function
+			#a(atan(bx+c)+Pi/2)+d
+			"""a=0.4
+			b=2
+			c=-2.6
+			d=-0.15
+			if pointX-trans[0]<3:
+				Xcoeff=a*(np.arctan(b*(pointX-trans[0])+c)+np.pi/2)+d
+			else:
+				Xcoeff=1
+			if pointY-trans[1]<3:				
+				Ycoeff=a*(np.arctan(b*(pointY-trans[1])+c)+np.pi/2)+d
+			else:
+				Ycoeff=1
+			if pointZ-trans[2]<3:
+				Zcoeff=a*(np.arctan(b*(pointZ-trans[2])+c)+np.pi/2)+d
+			else:
+				Zcoeff=1"""
+				
+
 
 			print(onX," --- ", onY," ---- ", onZ) 
-			(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
+			
 			print(Xcoeff," --- ", Ycoeff," ---- ", Zcoeff) 
 				
 			twist = Twist()
@@ -63,11 +110,11 @@ def goToPoint(pointX, pointY, pointZ):
 				
 			#Movement condition on X
 			if trans[0] < pointX-epsilon:
-				twist.linear.x = 0.3
+				twist.linear.x = Xcoeff
 				print("x=",twist.linear.x,"\n")
 				
 			elif trans[0] > pointX+epsilon:
-				twist.linear.x = -0.3
+				twist.linear.x = -Xcoeff
 				print("x=",twist.linear.x,"\n")
 				
 			else:
@@ -76,11 +123,11 @@ def goToPoint(pointX, pointY, pointZ):
 				
 			#Movement condition on Y
 			if trans[1] < pointY-epsilon:
-				twist.linear.y = 0.3
+				twist.linear.y = Ycoeff
 				print("y=",twist.linear.y,"\n")
 				
 			elif trans[1] > pointY+epsilon:
-				twist.linear.y = -0.3
+				twist.linear.y = -Ycoeff
 				print("y=",twist.linear.y,"\n")
 				
 			else :
@@ -89,11 +136,11 @@ def goToPoint(pointX, pointY, pointZ):
 				
 			#Movement condition on Z
 			if trans[2] < pointZ-epsilon :
-				twist.linear.z = 0.3
+				twist.linear.z = Zcoeff
 				print("z=",twist.linear.z,"\n")
 				
 			if trans[2] > pointZ+epsilon :
-				twist.linear.z = -0.3
+				twist.linear.z = -Zcoeff
 				print("z=",twist.linear.z,"\n")
 				
 			else :
@@ -111,11 +158,11 @@ def goToPoint(pointX, pointY, pointZ):
 			continue
 
 		print("trans odom: ",trans)
-		print("trans camera: ",transCam)
 		print("rot: ", rot)
+		coeffValues.append(Xcoeff)
 		
 	(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
-	return (trans,rot)
+	return (trans,rot,coeffValues)
 
 def autopilot():
 
@@ -124,10 +171,6 @@ def autopilot():
 
 	(trans,rot)=listener.lookupTransform('odom','base_link',rospy.Time(0))
 	(transCam,rotCam)=listenerCam.lookupTransform('base_link','camera_base_link',rospy.Time(0))
-
-    
-	#Allowed error on position
-	epsilon=0.3
 	
 	confirm="n"
 	
@@ -162,9 +205,11 @@ def autopilot():
 	
 	if confirm == "yes" or confirm == "y":
 		
-		goToPoint(pointX, pointY, pointZ)
+		res=goToPoint(pointX, pointY, pointZ)
 
-		print("Arrived at target: [",trans[0],",",trans[1],",",trans[2],"] !")
+		print("Arrived at target: [",res[0][0],",",res[0][1],",",res[0][2],"] !")
+		x = np.arange(0, 5, 0.1);
+		plt.plot(x, res[2])
 
 def getKey():
 	tty.setraw(sys.stdin.fileno())
@@ -235,7 +280,7 @@ if __name__=="__main__":
 		finally:
 			twist = Twist()
 			twist.linear.x = 0.0; twist.linear.y = 0.0; twist.linear.z = 0.0
-			twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = 0.0
+			twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = 0.0			
 			pub.publish(twist)
 			pubLand.publish()
 			print("Land!")	    		
