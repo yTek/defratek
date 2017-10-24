@@ -2,6 +2,7 @@
 import roslib;
 import rospy
 
+from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Empty
 import sys, select, termios, tty, time
@@ -18,10 +19,8 @@ msg= """Mode Manuel
 		q : translation a gauche
 		s : reculer
 		d : translation a droite
-
 		i : monter
 		k : descendre
-
 		j : rotation trigonometrique
 		l : rotation horaire
 	"""
@@ -43,7 +42,7 @@ autoMod=True
 #Point variable
 currentProsition=[]
 objectifPointList=[]
-objectifPoint=[0.0,0.0,0.0]
+objectifPoint=[0.0,0.0,1.0]
 
 #List to plot curve
 abscisseValues=[]
@@ -51,30 +50,30 @@ timeValues=[]
 coeffValues=[]	
 
 def getSimpleControl():
+	
+	m = 5 #Number of meter around the point at which the drone start to slow
 
 	#get direction (+ or -)
-	dirX= float (np.sign(objectifPoint[0]-currentProsition[0]))
-	dirY= float (np.sign(objectifPoint[1]-currentProsition[1]))
-	dirZ= float (np.sign(objectifPoint[2]-currentProsition[2]))
+	dirX= float (np.sign(objectifPoint[0]-currentProsition.x))
+	dirY= float (np.sign(objectifPoint[1]-currentProsition.y))
+	dirZ= float (np.sign(objectifPoint[2]-currentProsition.z))
 
 	#Speed variation: 1-exp(-x)
-	Xcoeff= 1-exp(-abs(currentProsition[0]-objectifPoint[0])/3)
-	Ycoeff= 1-exp(-abs(currentProsition[1]-objectifPoint[1])/3)
-	Zcoeff= 1-exp(-abs(currentProsition[2]-objectifPoint[2])/3)
+	Xcoeff= 1-exp(-abs(currentProsition.x-objectifPoint[0])/m)
+	Ycoeff= 1-exp(-abs(currentProsition.y-objectifPoint[1])/m)
+	Zcoeff= 1-exp(-abs(currentProsition.z-objectifPoint[2])/m)
 
 	#Speed variation: Linear function
 	"""if abs(objectifPoint[0]-currentProsition[0])<3:
-		Xcoeff=abs((objectifPoint[0]-currentProsition[0])/3)
+		Xcoeff=abs((objectifPoint[0]-currentProsition[0])/m)
 	else:
 		Xcoeff=1.0
-
 	if abs(objectifPoint[1]-currentProsition[1])<3:				
-		Ycoeff=abs((objectifPoint[1]-currentProsition[1])/3)
+		Ycoeff=abs((objectifPoint[1]-currentProsition[1])/m)
 	else:
 		Ycoeff=1.0
-
 	if abs(objectifPoint[2]-currentProsition[2])<3:
-		Zcoeff=abs((objectifPoint[2]-currentProsition[2])/3)
+		Zcoeff=abs((objectifPoint[2]-currentProsition[2])/m)
 	else:
 		Zcoeff=1.0"""
 
@@ -88,12 +87,10 @@ def getSimpleControl():
 		Xcoeff=a*(np.arctan(b*(abs(objectifPoint[0]-currentProsition[0]))+c)+np.pi/2)+d
 	else:
 		Xcoeff=1.0
-
 	if abs(objectifPoint[1]-currentProsition[1])<3:				
 		Ycoeff=a*(np.arctan(b*abs(objectifPoint[1]-currentProsition[1])+c)+np.pi/2)+d
 	else:
 		Ycoeff=1.0
-
 	if abs(objectifPoint[1]-currentProsition[2])<3:	
 		Zcoeff=a*(np.arctan(b*abs(objectifPoint[2]-currentProsition[2])+c)+np.pi/2)+d
 	else:
@@ -106,14 +103,17 @@ def odometry_callback(msg):
 
 	#Allowed error on position
 	epsilon=0.3
-
+	
 	#Updating current Postion
-	currentProsition=msg
+	global currentProsition
+	currentProsition=msg.pose.pose.position
+	print(currentProsition)
+	global objectifPoint
 	print("Pos --- X: ", objectifPoint[0]," | Y: ", objectifPoint[1]," | Z: ", objectifPoint[2])
-
+	
 	#Automod
 	if autoMod==True:
-
+		twist = Twist()
 		#init twist X Y Z
 		twist.linear.x = 0.0; twist.linear.y = 0.0; twist.linear.z = 0.0
 		twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = 0.0
@@ -121,24 +121,23 @@ def odometry_callback(msg):
 		cmd=getSimpleControl()
 
 		#Test if in point radius
-		if sqrt( (currentProsition[0]-objectifPoint[0])**2 + (currentProsition[1]-objectifPoint[1])**2 +(currentProsition[2]-objectifPoint[2])**2 ) > epsilon:
+		if sqrt( (currentProsition.x-objectifPoint[0])**2 + (currentProsition.y-objectifPoint[1])**2 +(currentProsition.z-objectifPoint[2])**2 ) > epsilon:
 			twist.linear.x = cmd[0]; twist.linear.y = cmd[1]; twist.linear.z = cmd[2]
 			#List to plot curve
-			abscisseValues.append(currentProsition[0])
+			abscisseValues.append(currentProsition.x)
 			coeffValues.append(cmd[0])	
 			pub.publish(twist)
 
-		elif objectifPointList is not None:
+		elif objectifPointList:
 			print("Arrived at ", objectifPoint)
 			objectifPoint=objectifPointList.pop()
 			print("New objectif is ", objectifPoint)
 
-		elif not objectifPointList and objectifPoint!=[0.0,0.0,0.0]:
-			pubLand.publish()
-			print("Land!")
-			print("Landed at : [",currentProsition[0],",",currentProsition[1],",",currentProsition[2],"] !")
-			plt.plot(abscisseValues, coeffValues)
-			plt.show()   		
+		elif not objectifPointList and objectifPoint!=[0.0,0.0,1.0]:
+			print("Arrived at : [",currentProsition.x,",",currentProsition.y,",",currentProsition.z,"] !")
+			autoMod=False
+			#pubLand.publish()
+			#print("Land!")  		
 
 def askPointToUser():
 	confirm="n"
@@ -174,8 +173,11 @@ def autopilot():
 	
 	#Point values set in the code directly
 	time.sleep(5)
+	objectifPointList.append([4.0,0.0,1.0])
 	objectifPointList.append([2.0,0.0,1.0])
 	print("New objectif is: ", [2.0,0.0,1.0])
+
+	rospy.spin()
 
 
 def getKey():
@@ -253,7 +255,8 @@ if __name__=="__main__":
 			pub.publish(twist)
 			pubLand.publish()
 			print("Land!")	 
+			plt.plot(abscisseValues, coeffValues)
+			plt.show() 
 			termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
 	else:
 		print("No start")
-
