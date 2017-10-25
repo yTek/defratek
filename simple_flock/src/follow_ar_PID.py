@@ -56,9 +56,9 @@ def PIDController(pos,lastPos):
 	else:
 		Zcoeff=1.0
 
-	Xcoeff/=2
-	Ycoeff/=2
-	Zcoeff/=2
+	Xcoeff/=0.5
+	Ycoeff/=0.5
+	Zcoeff/=0.5
 
 	return (Xcoeff,Ycoeff,Zcoeff)
 
@@ -71,8 +71,7 @@ def callback(msg):
 			print("AR identifie") 
 			ar_pos = [markers.pose.pose.position.x, markers.pose.pose.position.y,markers.pose.pose.position.z]
 	
-	#Rate to send data is 10Hz
-	rate = rospy.Rate(3.0)
+	
 
 	#Allowed error on position
 	epsilon=[0.2,0.2,0.1]
@@ -91,7 +90,7 @@ def callback(msg):
 
 			#Movement condition on X
 			if ar_pos[0] < safe_dist[0]-epsilon[0]:
-				twist.linear.x = control[0]
+				twist.linear.x = -control[0]
 			elif ar_pos[0] > safe_dist[0]+epsilon[0]:
 				twist.linear.x = control[0]
 			else:
@@ -101,9 +100,9 @@ def callback(msg):
 	
 			#Movement condition on Y
 			if ar_pos[1] < safe_dist[1]-epsilon[1]:
-				twist.linear.y = -control[1]
-			elif ar_pos[1] > safe_dist[1]+epsilon[1]:
 				twist.linear.y = control[1]
+			elif ar_pos[1] > safe_dist[1]+epsilon[1]:
+				twist.linear.y = -control[1]
 			else :
 				twist.linear.y = 0.0
 			
@@ -113,7 +112,7 @@ def callback(msg):
 			if ar_pos[2] < safe_dist[1]-epsilon[2]:
 				twist.linear.z = -control[2]
 			elif ar_pos[2] > safe_dist[1]+epsilon[2]:
-				twist.linear.z = control[0]
+				twist.linear.z = control[2]
 			else :
 				twist.linear.z = 0.0
 			
@@ -122,7 +121,7 @@ def callback(msg):
 		except:
 			print("error")
 		print("twist: ", twist.linear)				
-	lastAr_pos= ar_pos[:]
+		lastAr_pos= ar_pos[:]
 	pub.publish(twist)
 
 
@@ -139,11 +138,14 @@ def getKey():
 if __name__=="__main__":
 	settings = termios.tcgetattr(sys.stdin)
 	
-	pub = rospy.Publisher('/bebop/cmd_vel', Twist, queue_size = 1)
-	pubTakeoff = rospy.Publisher('/bebop/takeoff', Empty, queue_size = 1)
-	pubLand = rospy.Publisher('/bebop/land', Empty, queue_size = 1)
+	pub = rospy.Publisher('/bebop2/cmd_vel', Twist, queue_size = 1)
+	pubTakeoff = rospy.Publisher('/bebop2/takeoff', Empty, queue_size = 1)
+	pubLand = rospy.Publisher('/bebop2/land', Empty, queue_size = 1)
 
 	rospy.init_node('follow_ar', anonymous= True, disable_signals=True)
+	#Rate to send data is 10Hz
+	rate = rospy.Rate(10.0)
+
 	sub = rospy.Subscriber("/ar_pose_marker", AlvarMarkers, callback)
 
 	start = raw_input("Take off? ")
