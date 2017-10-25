@@ -36,11 +36,32 @@ ID_MARKER = 4
 
 ar_pos = []
 currentProsition=()
+lastCurrentProsition=()
 
 safe_dist = [1.0,0.0,0.0]
 
+def PIDController():
+	
+	m = 1 #Number of meter around the point at which the drone start to slow
 
+	if abs(objectifPoint[0]-currentProsition[0])<m:
+		Xcoeff=abs((objectifPoint[0]-currentProsition[0])/m)
+	else:
+		Xcoeff=1.0
+	if abs(objectifPoint[1]-currentProsition[1])<m:				
+		Ycoeff=abs((objectifPoint[1]-currentProsition[1])/m)
+	else:
+		Ycoeff=1.0
+	if abs(objectifPoint[2]-currentProsition[2])<m:
+		Zcoeff=abs((objectifPoint[2]-currentProsition[2])/m)
+	else:
+		Zcoeff=1.0
 
+	Xcoeff/=2
+	Ycoeff/=2
+	Zcoeff/=2
+
+	return (Xcoeff,Ycoeff,Zcoeff)
 
 def callback(msg):
 
@@ -62,6 +83,7 @@ def callback(msg):
 		print("Updating pos: ",currentProsition)
 
 def odometry_callback(msg):
+	lastCurrentProsition=currentProsition
 	currentProsition=msg.pose.pose.position
 	print("Odom pos: ",currentProsition)
 	
