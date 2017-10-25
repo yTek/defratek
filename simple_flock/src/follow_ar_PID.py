@@ -43,7 +43,7 @@ def PIDController(pos,obj):
 
 	print ("pos: ",pos,"  last pos:", obj)	
 
-	m = 1 #Number of meter around the point at which the drone start to slow
+	m = 1 #Number of meter around the point at which the drone start to slow  
 
 	if abs(pos[0]-obj[0])<m:
 		Xcoeff=abs((pos[0]-obj[0])/m)
