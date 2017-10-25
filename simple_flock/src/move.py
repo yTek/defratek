@@ -64,15 +64,15 @@ def getSimpleControl():
 	Zcoeff= 1-exp(-abs(currentProsition.z-objectifPoint[2])/m)
 
 	#Speed variation: Linear function
-	"""if abs(objectifPoint[0]-currentProsition[0])<3:
+	"""if abs(objectifPoint[0]-currentProsition[0])<m:
 		Xcoeff=abs((objectifPoint[0]-currentProsition[0])/m)
 	else:
 		Xcoeff=1.0
-	if abs(objectifPoint[1]-currentProsition[1])<3:				
+	if abs(objectifPoint[1]-currentProsition[1])<m:				
 		Ycoeff=abs((objectifPoint[1]-currentProsition[1])/m)
 	else:
 		Ycoeff=1.0
-	if abs(objectifPoint[2]-currentProsition[2])<3:
+	if abs(objectifPoint[2]-currentProsition[2])<m:
 		Zcoeff=abs((objectifPoint[2]-currentProsition[2])/m)
 	else:
 		Zcoeff=1.0"""
