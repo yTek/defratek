@@ -39,26 +39,28 @@ lastAr_pos = None
 
 safe_dist = [1.0,0.0,0.0]
 
-def PIDController(pos,lastPos):
-	
+def PIDController(pos,obj):
+
+	print ("pos: ",pos,"  last pos:", obj)	
+
 	m = 1 #Number of meter around the point at which the drone start to slow
 
-	if abs(pos[0]-lastPos[0])<m:
-		Xcoeff=abs((pos[0]-lastPos[0])/m)
+	if abs(pos[0]-obj[0])<m:
+		Xcoeff=abs((pos[0]-obj[0])/m)
 	else:
 		Xcoeff=1.0
-	if abs(pos[1]-lastPos[1])<m:				
-		Ycoeff=abs((pos[1]-lastPos[1])/m)
+	if abs(pos[1]-obj[1])<m:				
+		Ycoeff=abs((pos[1]-obj[1])/m)
 	else:
 		Ycoeff=1.0
-	if abs(pos[2]-lastPos[2])<m:
-		Zcoeff=abs((pos[2]-lastPos[2])/m)
+	if abs(pos[2]-obj[2])<m:
+		Zcoeff=abs((pos[2]-obj[2])/m)
 	else:
 		Zcoeff=1.0
 
-	Xcoeff/=0.5
-	Ycoeff/=0.5
-	Zcoeff/=0.5
+	Xcoeff/=2
+	Ycoeff/=2
+	Zcoeff/=2
 
 	return (Xcoeff,Ycoeff,Zcoeff)
 
@@ -86,7 +88,7 @@ def callback(msg):
 			print("ar_pos:", ar_pos)
 			
 			#Get PID control
-			control=PIDController(ar_pos,lastAr_pos)
+			control=PIDController(ar_pos,safe_dist)
 
 			#Movement condition on X
 			if ar_pos[0] < safe_dist[0]-epsilon[0]:
@@ -175,7 +177,7 @@ if __name__=="__main__":
 				if a:
 					break
 					
-
+	
 
 		except KeyboardInterrupt:
 			try:
