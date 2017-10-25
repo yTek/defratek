@@ -43,16 +43,16 @@ def PIDController(pos,lastPos):
 	
 	m = 1 #Number of meter around the point at which the drone start to slow
 
-	if abs(objectifPoint[0]-currentProsition[0])<m:
-		Xcoeff=abs((objectifPoint[0]-currentProsition[0])/m)
+	if abs(pos[0]-lastPos[0])<m:
+		Xcoeff=abs((pos[0]-lastPos[0])/m)
 	else:
 		Xcoeff=1.0
-	if abs(objectifPoint[1]-currentProsition[1])<m:				
-		Ycoeff=abs((objectifPoint[1]-currentProsition[1])/m)
+	if abs(pos[1]-lastPos[1])<m:				
+		Ycoeff=abs((pos[1]-lastPos[1])/m)
 	else:
 		Ycoeff=1.0
-	if abs(objectifPoint[2]-currentProsition[2])<m:
-		Zcoeff=abs((objectifPoint[2]-currentProsition[2])/m)
+	if abs(pos[2]-lastPos[2])<m:
+		Zcoeff=abs((pos[2]-lastPos[2])/m)
 	else:
 		Zcoeff=1.0
 
