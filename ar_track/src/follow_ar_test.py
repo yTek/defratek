@@ -136,14 +136,14 @@ if __name__=="__main__":
 		a = None
 		try:
 			time.sleep(3)
-			"""time_temp = time.time()
-			twist = Twist()"""
+			time_temp = time.time()
+			twist = Twist()
 			while 1:
-				"""if time.time()-time_temp > 0.2:
+				if time.time()-time_temp > 0.2:
 					twist.linear.x = 0.0; twist.linear.y = 0.0; twist.linear.z = 0.0
 					twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = 0.0
 					pub.publish(twist)
-					time_temp = time.time()"""
+					time_temp = time.time()
 				if a:
 					break
 					
