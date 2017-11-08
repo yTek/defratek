@@ -1,10 +1,12 @@
 #!/usr/bin/env python
-import roslib;
+import roslib
 import rospy
 
 from geometry_msgs.msg import Twist,Pose, Point
+from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty
 from ar_track_alvar_msgs.msg import AlvarMarkers
+
 import sys, select, termios, tty, time
 
 msg= """Mode Manuel 
@@ -17,8 +19,8 @@ msg= """Mode Manuel
 		i : monter
 		k : descendre
 
-		j : rotation sens trigonometrique
-		l : rotation sens horaire
+		j : rotation trigonometrique
+		l : rotation horaire
 	"""
 
 mvtBindings = {
@@ -34,14 +36,20 @@ mvtBindings = {
 
 ID_MARKER = 4
 
-ar_pos = None
-lastAr_pos = None
+currentPosition=(0.0,0.0,0.0)
+objectifPosition=()
+OdomcurrentPosition=()
+OdomlastPosition=()
+following=False
+refreshIgnore=0
+tempObj=(0.0,0.0,0.0)
 
-safe_dist = [1.0,0.0,0.0]
+safe_dist = (1.0,0.0,0.0)
 
-def PIDController(pos,obj):
-
-	print ("pos: ",pos,"  last pos:", obj)	
+def PIDController(pos):
+	obj=safe_dist
+	print ("pos: ",pos)
+	print ("obj: ", obj)	
 
 	m = 1 #Number of meter around the point at which the drone start to slow  
 
@@ -64,70 +72,137 @@ def PIDController(pos,obj):
 
 	return (Xcoeff,Ycoeff,Zcoeff)
 
-def callback(msg):
-	global lastAr_pos
-	global ar_pos
+"""Currently updates with the difference the distance between Alvar and drone
+But needs to be modify by updating with the know coordonates of Alvar + distance between
+drone and alvar"""
+def alvar_callback(msg):
+	global currentPosition
+	global objectifPosition
+	global following
+	global tempObj
+	global refreshIgnore
 
 	for markers in msg.markers:
 		if ID_MARKER is markers.id:
-			print("AR identifie") 
-			ar_pos = [markers.pose.pose.position.x, markers.pose.pose.position.y,markers.pose.pose.position.z]
-	
-	
+			print("AR identifie")
 
-	#Allowed error on position
-	epsilon=[0.2,0.2,0.1]
-	
-	twist = Twist()
-	#init twist X Y Z
-	twist.linear.x = 0.0; twist.linear.y = 0.0; twist.linear.z = 0.0
-	twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = 0.0
-
-	if lastAr_pos != ar_pos and (lastAr_pos is not None or ar_pos is not None):
-		try:
-			print("ar_pos:", ar_pos)
+			following=True
 			
-			#Get PID control
-			control=PIDController(ar_pos,safe_dist)
-
-			#Movement condition on X
-			if ar_pos[0] < safe_dist[0]-epsilon[0]:
-				twist.linear.x = -control[0]
-			elif ar_pos[0] > safe_dist[0]+epsilon[0]:
-				twist.linear.x = control[0]
-			else:
-				twist.linear.x = 0.0
-
-			print("x=",twist.linear.x)
-	
-			#Movement condition on Y
-			if ar_pos[1] < safe_dist[1]-epsilon[1]:
-				twist.linear.y = control[1]
-			elif ar_pos[1] > safe_dist[1]+epsilon[1]:
-				twist.linear.y = -control[1]
-			else :
-				twist.linear.y = 0.0
-			
-			print("y=",twist.linear.y)
-	
-			#Movement condition on Z
-			if ar_pos[2] < safe_dist[1]-epsilon[2]:
-				twist.linear.z = -control[2]
-			elif ar_pos[2] > safe_dist[1]+epsilon[2]:
-				twist.linear.z = control[2]
-			else :
-				twist.linear.z = 0.0
-			
-			print("z=",twist.linear.z)
-
-		except:
-			print("error")
-		print("twist: ", twist.linear)				
-		lastAr_pos= ar_pos[:]
-	pub.publish(twist)
-
-
 		
+
+			"""#Difference between the drone location with regard to alvar and wanted location 
+			deltaX=markers.pose.pose.position.x-safe_dist[0]
+			deltaY=markers.pose.pose.position.y-safe_dist[1]
+			deltaZ=markers.pose.pose.position.z-safe_dist[2]
+
+			if refreshIgnore==0:
+				objectifPosition=(currentPosition[0]+deltaX,currentPosition[1]+deltaY,currentPosition[2]+deltaZ)
+
+			elif refreshIgnore==5:
+    				tempObj()
+    				refreshIgnore=0
+			else:
+    				refreshIgnore+=1"""
+
+			#Updating position with alvar
+			currentPosition=(markers.pose.pose.position.x, markers.pose.pose.position.y, markers.pose.pose.position.z)
+			#print("Alvar: ",currentPosition)
+			"""#Publishing pos for other drones
+			pos.x=currentPosition[0]
+			pos.y=currentPosition[1]
+			pos.z=currentPosition[2]
+			pubPos.publish(pos)"""
+
+			#print("pos with ar: ",currentPosition,"\nObjectif point: ",objectifPosition)
+			followLeader(currentPosition)
+
+
+def odometry_callback(msg):
+
+	pos=Point()
+
+	global currentPosition
+	global OdomlastPosition
+	global objectifPosition
+	global following
+
+	#Inverse X so that +X is aiming where the bebop camera aims
+	#Y pos is + when going left to where the camera aims
+	#Z is + when drones goes up
+	#Be careful with calibration
+	odomOnX=-msg.pose.pose.position.x
+	odomOnY=-msg.pose.pose.position.y
+	odomOnZ=msg.pose.pose.position.z
+
+	#Getting the delta corresponding to the movement 
+	if OdomlastPosition:
+		
+		posX=odomOnX-OdomlastPosition[0]
+		posY=odomOnY-OdomlastPosition[1]
+		posZ=odomOnZ-OdomlastPosition[2]
+		currentPosition=(currentPosition[0]-posX,currentPosition[1]-posY,currentPosition[2]+posZ)
+
+	OdomlastPosition=(odomOnX,odomOnY,odomOnZ)
+
+	"""#Publishing pos for other drones
+	pos.x=currentPosition[0]
+	pos.y=currentPosition[1]
+	pos.z=currentPosition[2]
+	pubPos.publish(pos)"""
+	#print("pos odom: ",msg.pose.pose.position.x," [] ", msg.pose.pose.position.y," [] ", msg.pose.pose.position.z)
+	#print("pos with magouille: ",currentPosition)
+	followLeader(currentPosition)
+
+
+def followLeader(pos):
+
+
+	#print("ici")
+	#Follows the drone's leader
+	if following == True:
+		#print('ici')
+    	#Allowed error on position
+		epsilon=[0.2,0.2,0.1]
+
+		#init twist X Y Z
+		twist = Twist()
+		twist.linear.x = 0.0; twist.linear.y = 0.0; twist.linear.z = 0.0
+		twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = 0.0
+
+		#Get PID control
+		control=PIDController(currentPosition)
+
+		#Movement condition on X
+		if currentPosition[0] < safe_dist[0]-epsilon[0]:
+			twist.linear.x = -control[0]
+		elif currentPosition[0] > safe_dist[0]+epsilon[0]:
+			twist.linear.x = control[0]
+		else:
+			twist.linear.x = 0.0
+
+		print("x=",twist.linear.x)
+
+		#Movement condition on Y
+		if currentPosition[1] < safe_dist[1]-epsilon[1]:
+			twist.linear.y = -control[1]
+		elif currentPosition[1] > safe_dist[1]+epsilon[1]:
+			twist.linear.y = control[1]
+		else :
+			twist.linear.y = 0.0
+		
+		print("y=",twist.linear.y)
+
+		#Movement condition on Z
+		"""if currentPosition[2] < safe_dist[1]-epsilon[2]:
+			twist.linear.z = control[2]
+		elif currentPosition[2] > safe_dist[1]+epsilon[2]:
+			twist.linear.z = -control[2]
+		else :
+			twist.linear.z = 0.0"""
+		
+		#print("z=",twist.linear.z)
+
+		pub.publish(twist)
 
 def getKey():
 	tty.setraw(sys.stdin.fileno())
@@ -138,22 +213,26 @@ def getKey():
 
 
 if __name__=="__main__":
+
+	if len(sys.argv) == 1:
+		name="bebop"
+
+	else:
+		name=str(argv[1])
+
 	settings = termios.tcgetattr(sys.stdin)
 	
-	pub = rospy.Publisher('/bebop2/cmd_vel', Twist, queue_size = 1)
-	pubTakeoff = rospy.Publisher('/bebop2/takeoff', Empty, queue_size = 1)
-	pubLand = rospy.Publisher('/bebop2/land', Empty, queue_size = 1)
-
+	pub = rospy.Publisher('/bebop/cmd_vel', Twist, queue_size = 1)
+	pubTakeoff = rospy.Publisher('/bebop/takeoff', Empty, queue_size = 1)
+	pubLand = rospy.Publisher('/bebop/land', Empty, queue_size = 1)
+	pubPos = rospy.Publisher(name+'_Pos', Point, queue_size = 1)	
 	rospy.init_node('follow_ar', anonymous= True, disable_signals=True)
-	#Rate to send data is 10Hz
-	rate = rospy.Rate(10.0)
-
-	sub = rospy.Subscriber("/ar_pose_marker", AlvarMarkers, callback)
+	sub = rospy.Subscriber("/ar_pose_marker", AlvarMarkers, alvar_callback)
 
 	start = raw_input("Take off? ")
 	#start="yes"
 	if start == "yes":
-		
+		rospy.Subscriber("/bebop/odom", Odometry, odometry_callback)
 		print("Take off")
 		pubTakeoff.publish()
 		
@@ -165,7 +244,7 @@ if __name__=="__main__":
 		
 		a = None
 		try:
-			time.sleep(3)
+			#time.sleep(3)
 			"""time_temp = time.time()
 			twist = Twist()"""
 			while 1:
@@ -174,11 +253,7 @@ if __name__=="__main__":
 					twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = 0.0
 					pub.publish(twist)
 					time_temp = time.time()"""
-				if a:
-					break
 					
-	
-
 		except KeyboardInterrupt:
 			try:
 				sub.unregister()
@@ -221,4 +296,3 @@ if __name__=="__main__":
 			termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
 	else:
 		print("No start")
-
