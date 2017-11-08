@@ -20,17 +20,17 @@ class simframe(Frame):
 
 		
 class waypointinput(Frame):
-	def __init__(self,master):
+	def __init__(self,master,waypointlist):
 		self.master=master
-
+		self.wpl=waypointlist
 		Frame.__init__(self, master)
 
 		self.xinput=Entry(self, width=6)
 		self.yinput=Entry(self, width=6)
 		self.zinput=Entry(self, width=6)
-		self.minusbutton=Button(self, text="X")
-		self.upbutton=Button(self,text="^")
-		self.downbutton=Button(self,text="v")
+		self.minusbutton=Button(self, text="X", command=self.deletewaypoint)
+		self.upbutton=self.downbutton=Button(self, text="^",  command=self.movewaypointup)
+		self.downbutton=Button(self,text="v", command=self.movewaypointdown)
 
 		self.xinput.pack(side=LEFT, padx=4)
 		self.yinput.pack(side=LEFT, padx=4)
@@ -38,6 +38,26 @@ class waypointinput(Frame):
 		self.minusbutton.pack(side=LEFT, padx=2)
 		self.upbutton.pack(side=LEFT)
 		self.downbutton.pack(side=LEFT)
+		
+		waypointlist.append(self)
+		self.pack()
+
+	def deletewaypoint(self):
+		self.pack_forget()
+		self.wpl.pop(self.wpl.index(self))
+		self.destroy()
+
+	def movewaypointup(self):
+		self.wpl.insert(self.wpl.index(self)-1, self.wpl.pop(self.wpl.index(self)))
+		for i in self.wpl:
+			i.pack_forget()
+			i.pack()
+
+	def movewaypointdown(self):
+		self.wpl.insert(self.wpl.index(self)+1, self.wpl.pop(self.wpl.index(self)))
+		for i in self.wpl:
+			i.pack_forget()
+			i.pack()
 
 class waypointsmanager(Frame):
 	def __init__(self,master):
@@ -53,14 +73,17 @@ class waypointsmanager(Frame):
 
 		self.waypointframe = Frame(self)
 		#self.waypointframe = Frame(self, yscrollcommand=scrollbar.set)
-		waypointlist = [waypointinput(self.waypointframe) for _ in range(14)]
-		for entry in waypointlist:
-			entry.pack()
+		self.waypointlist=[]
 
+		self.addbutton =Button(self, text="Add Waypoint",  command=self.addwaypoint)
+		self.addbutton.pack()
 		self.waypointframe.pack(side=RIGHT, fill=BOTH)
 
 		#scrollbar.config(command=waypointframe.yview)
-		self.grid(row=0,column=2,sticky='wens')
+		self.grid(row=0,column=1,sticky='wens')
+
+	def addwaypoint(self):
+		waypointinput(self.waypointframe, self.waypointlist)
 
 class term(Frame):
 	def __init__(self, master, size, color):
@@ -104,14 +127,14 @@ class mastergui:
 		self.waypoint = waypointsmanager(master)
 		
 		
-		"""self.terminal = term(master,(246,15), "white")
+		self.terminal = term(master,(246,15), "white")
 		self.terminal.grid(row=1,column=0,columnspan=2,sticky='wens')
 		
 		self.terminal2 = term(master,(246,15),"grey")
 		self.terminal2.grid(row=2,column=0,columnspan=2,sticky='wens')
 		
 		self.terminal3 = term(master,(246,15),"white")
-		self.terminal3.grid(row=3,column=0,columnspan=2,sticky='wens')"""
+		self.terminal3.grid(row=3,column=0,columnspan=2,sticky='wens')
 
 if __name__ == "__main__":
 

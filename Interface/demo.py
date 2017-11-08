@@ -24,4 +24,10 @@ if __name__ == "__main__":
 	
 	waypointframe.pack()
 
+	def callback():
+		print "click!"
+
+	b = Button(root, text="OK", command=callback)
+	b.pack()
+
 	root.mainloop()
