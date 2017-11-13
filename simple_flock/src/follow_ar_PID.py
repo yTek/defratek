@@ -66,9 +66,9 @@ def PIDController(pos):
 	else:
 		Zcoeff=1.0
 
-	Xcoeff/=2
-	Ycoeff/=2
-	Zcoeff/=2
+	Xcoeff/=10
+	Ycoeff/=10
+	Zcoeff/=10
 
 	return (Xcoeff,Ycoeff,Zcoeff)
 
@@ -222,17 +222,18 @@ if __name__=="__main__":
 
 	settings = termios.tcgetattr(sys.stdin)
 	
-	pub = rospy.Publisher('/bebop/cmd_vel', Twist, queue_size = 1)
-	pubTakeoff = rospy.Publisher('/bebop/takeoff', Empty, queue_size = 1)
-	pubLand = rospy.Publisher('/bebop/land', Empty, queue_size = 1)
+	pub = rospy.Publisher('/bebop2/cmd_vel', Twist, queue_size = 1)
+	pubTakeoff = rospy.Publisher('/bebop2/takeoff', Empty, queue_size = 1)
+	pubLand = rospy.Publisher('/bebop2/land', Empty, queue_size = 1)
 	pubPos = rospy.Publisher(name+'_Pos', Point, queue_size = 1)	
 	rospy.init_node('follow_ar', anonymous= True, disable_signals=True)
-	sub = rospy.Subscriber("/ar_pose_marker", AlvarMarkers, alvar_callback)
+	
 
-	start = raw_input("Take off? ")
+	start = raw_input("bebop2: Take off? ")
 	#start="yes"
 	if start == "yes":
-		rospy.Subscriber("/bebop/odom", Odometry, odometry_callback)
+		rospy.Subscriber("/bebop2/odom", Odometry, odometry_callback)
+		sub = rospy.Subscriber("/ar_pose_marker", AlvarMarkers, alvar_callback)
 		print("Take off")
 		pubTakeoff.publish()
 		
