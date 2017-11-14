@@ -40,7 +40,6 @@ ID_MARKER = 4
 #-----GLOBAL VARIABLE-----
 
 #Position variable
-lastPosition=(0.0,0.0,0.0)
 currentPosition=(0.0,0.0,0.0)
 
 OdomcurrentPosition=()
@@ -61,8 +60,6 @@ following=False
 
 #Position offset constant
 safe_dist = (1.5,0.0,0.0)
-
-arWait=time.time()
 
 def init_log_file():
 
@@ -99,8 +96,6 @@ def alvar_callback(msg):
 	global objectifPosition
 	global following
 
-
-
 	for markers in msg.markers:
 		if ID_MARKER is markers.id:
 			print("AR identifie")
@@ -115,10 +110,12 @@ def alvar_callback(msg):
 
 
 def odometry_callback(msg):
-	pass	
-	"""print("ODOM")
+	print("ODOM")
 	global currentPosition
 	global OdomlastPosition
+	global Speed
+	global lastPosTime
+	global posTime
 
 	#Inverse X so that +X is aiming where the bebop camera aims
 	#Y pos is + when going left to where the camera aims
@@ -127,16 +124,33 @@ def odometry_callback(msg):
 	odomOnX=-msg.pose.pose.position.x
 	odomOnY=-msg.pose.pose.position.y
 	odomOnZ=msg.pose.pose.position.z
+	posTime=time.time()
 
 	#Getting the delta corresponding to the movement 
 	if OdomlastPosition:
-		
+		dt=posTime-lastPosTime
 		posX=odomOnX-OdomlastPosition[0]
 		posY=odomOnY-OdomlastPosition[1]
 		posZ=odomOnZ-OdomlastPosition[2]
+
+		if dt>0.1:
+			Vx=(posX)/(dt)
+			Vy=(posY)/(dt)
+			Vz=(posZ)/(dt)
+
+			Speed=(Vx,Vy,Vz)
+
+			hour=time.strftime("%Ih%Mm%Ss")
+
+			speedLog.write(hour+" --- "+str(Speed)+"\n")
+			#speedLog.write("Dt:"+ str(posTime-lastPosTime) +"\n")
+			print("Speed: ",Speed)
+
+
 		updatePosition(currentPosition[0]-posX,currentPosition[1]-posY,currentPosition[2]-posZ)
 
-	OdomlastPosition=(odomOnX,odomOnY,odomOnZ)"""
+	OdomlastPosition=(odomOnX,odomOnY,odomOnZ)
+	lastPosTime=posTime
 
 
 
@@ -149,8 +163,7 @@ def PIDController(pos):
 	print ("pos: ",pos)
 	#print ("obj: ", obj)	
 
-	m = 1 #Number of meter around the point at which the drone start to slow  
-
+	m = 1 #Number of meter around the point at which the drone start to slow
 
 	#Computing wanted speed
 	if abs(pos[0]-obj[0])<m:
@@ -176,29 +189,15 @@ def PIDController(pos):
 	Ycoeff=(WVy-Speed[1])/(abs(WVy-Speed[1])+a)
 	Zcoeff=(WVz-Speed[2])/(abs(WVz-Speed[2])+a)
 
-	
-
-
 	return (Xcoeff,Ycoeff,Zcoeff)
 
 """Update the global position"""
 def updatePosition(posX,posY,posZ):
 	global currentPosition
-	global lastPosition
-	global Speed
-	global lastPosTime
-	global posTime
 	global posLog
 	global speedLog
-	global cnt
-
-	lastPosTime=posTime
-	lastPosition=currentPosition
 
 	currentPosition=(posX, posY, posZ)
-	posTime=time.time()
-
-	dt=posTime-lastPosTime
 
 	hour=time.strftime("%Ih%Mm%Ss")
 	posLog.write(hour+" --- "+str(currentPosition)+"\n")
@@ -213,20 +212,7 @@ def updatePosition(posX,posY,posZ):
 	#Avoid a jump in speed values when switching from
 	#odom pos to alvar pos for the 1st time
 	if following==True:
-    		
-			if dt>0.1:
-				Vx=(currentPosition[0]-lastPosition[0])/(dt)
-				Vy=(currentPosition[1]-lastPosition[1])/(dt)
-				Vz=(currentPosition[2]-lastPosition[2])/(dt)
-
-				Speed=(Vx,Vy,Vz)
-
-				speedLog.write(hour+" --- "+str(Speed)+"\n")
-				speedLog.write("T POS:"+str(posTime)+" --- T Last POS:"+ str(lastPosTime)+"\n")
-				#speedLog.write("Dt:"+ str(posTime-lastPosTime) +"\n")
-				print("Speed: ",Speed)
-
-				followLeader(currentPosition)
+		followLeader(currentPosition)
 
 
 def followLeader(pos):
@@ -235,7 +221,7 @@ def followLeader(pos):
 	if following == True:
 		#print('ici')
     	#Allowed error on position
-		epsilon=[0.05,0.1,0.1]
+		epsilon=[0.1,0.1,0.1]
 
 		#init twist X Y Z
 		twist = Twist()
@@ -313,7 +299,7 @@ if __name__=="__main__":
 		rospy.Subscriber('/'+name+"/odom", Odometry, odometry_callback)
 		sub = rospy.Subscriber("/ar_pose_marker", AlvarMarkers, alvar_callback, queue_size = 1)
 		print("Take off")
-		pubTakeoff.publish()
+		#pubTakeoff.publish()
 		
 		x = 0.0
 		y = 0.0
