@@ -6,6 +6,7 @@ from geometry_msgs.msg import Twist,Pose, Point
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty
 from ar_track_alvar_msgs.msg import AlvarMarkers
+from subprocess import call
 
 import sys, select, termios, tty, time
 
@@ -36,41 +37,59 @@ mvtBindings = {
 
 ID_MARKER = 4
 
+#-----GLOBAL VARIABLE-----
+
+#Position variable
+lastPosition=(0.0,0.0,0.0)
 currentPosition=(0.0,0.0,0.0)
-objectifPosition=()
+
 OdomcurrentPosition=()
 OdomlastPosition=()
+
+#Speed variable
+Speed=(0.0,0.0,0.0)
+
+#Time variable
+posTime=0
+lastPosTime=0;
+
+#Log Files
+posLog=None
+speedLog=None
+
 following=False
-refreshIgnore=0
-tempObj=(0.0,0.0,0.0)
 
-safe_dist = (1.0,0.0,0.0)
+#Position offset constant
+safe_dist = (1.5,0.0,0.0)
 
-def PIDController(pos):
-	obj=safe_dist
-	print ("pos: ",pos)
-	print ("obj: ", obj)	
+arWait=time.time()
 
-	m = 1 #Number of meter around the point at which the drone start to slow  
+def init_log_file():
 
-	if abs(pos[0]-obj[0])<m:
-		Xcoeff=abs((pos[0]-obj[0])/m)
-	else:
-		Xcoeff=1.0
-	if abs(pos[1]-obj[1])<m:				
-		Ycoeff=abs((pos[1]-obj[1])/m)
-	else:
-		Ycoeff=1.0
-	if abs(pos[2]-obj[2])<m:
-		Zcoeff=abs((pos[2]-obj[2])/m)
-	else:
-		Zcoeff=1.0
+	global posLog
+	global speedLog
+	
+	date=time.strftime("%d_%m_%Y")
+	hour=time.strftime("%Ih%Mm%Ss")
+	suffix=date+ "-" + hour
 
-	Xcoeff/=10
-	Ycoeff/=10
-	Zcoeff/=10
+	call(["mkdir", "log/"+suffix])
 
-	return (Xcoeff,Ycoeff,Zcoeff)
+	posLog=open("log/"+suffix+"/pos_"+suffix+".txt","w")
+
+	posLog.write("----- Log test "+date+": pos -----\n")
+
+	speedLog=open("log/"+suffix+"/speed_"+suffix+".txt","w")
+
+	speedLog.write("----- Log test "+date+": pos -----\n")
+
+def close_log_file():
+    	
+	global posLog
+	global speedLog
+
+	posLog.close()
+	speedLog.close()
 
 """Currently updates with the difference the distance between Alvar and drone
 But needs to be modify by updating with the know coordonates of Alvar + distance between
@@ -79,52 +98,27 @@ def alvar_callback(msg):
 	global currentPosition
 	global objectifPosition
 	global following
-	global tempObj
-	global refreshIgnore
+
+
 
 	for markers in msg.markers:
 		if ID_MARKER is markers.id:
 			print("AR identifie")
-
-			following=True
-			
-		
-
-			"""#Difference between the drone location with regard to alvar and wanted location 
-			deltaX=markers.pose.pose.position.x-safe_dist[0]
-			deltaY=markers.pose.pose.position.y-safe_dist[1]
-			deltaZ=markers.pose.pose.position.z-safe_dist[2]
-
-			if refreshIgnore==0:
-				objectifPosition=(currentPosition[0]+deltaX,currentPosition[1]+deltaY,currentPosition[2]+deltaZ)
-
-			elif refreshIgnore==5:
-    				tempObj()
-    				refreshIgnore=0
-			else:
-    				refreshIgnore+=1"""
+			print(markers.pose.pose.position.x, markers.pose.pose.position.y, markers.pose.pose.position.z)
+			print("-------------")
+			#if time.time()-arWait>0.5:
 
 			#Updating position with alvar
-			currentPosition=(markers.pose.pose.position.x, markers.pose.pose.position.y, markers.pose.pose.position.z)
-			#print("Alvar: ",currentPosition)
-			"""#Publishing pos for other drones
-			pos.x=currentPosition[0]
-			pos.y=currentPosition[1]
-			pos.z=currentPosition[2]
-			pubPos.publish(pos)"""
-
-			#print("pos with ar: ",currentPosition,"\nObjectif point: ",objectifPosition)
-			followLeader(currentPosition)
+			updatePosition(markers.pose.pose.position.x, markers.pose.pose.position.y, markers.pose.pose.position.z)
+			
+			following=True
 
 
 def odometry_callback(msg):
-
-	pos=Point()
-
+	pass	
+	"""print("ODOM")
 	global currentPosition
 	global OdomlastPosition
-	global objectifPosition
-	global following
 
 	#Inverse X so that +X is aiming where the bebop camera aims
 	#Y pos is + when going left to where the camera aims
@@ -140,29 +134,108 @@ def odometry_callback(msg):
 		posX=odomOnX-OdomlastPosition[0]
 		posY=odomOnY-OdomlastPosition[1]
 		posZ=odomOnZ-OdomlastPosition[2]
-		currentPosition=(currentPosition[0]-posX,currentPosition[1]-posY,currentPosition[2]+posZ)
+		updatePosition(currentPosition[0]-posX,currentPosition[1]-posY,currentPosition[2]-posZ)
 
-	OdomlastPosition=(odomOnX,odomOnY,odomOnZ)
+	OdomlastPosition=(odomOnX,odomOnY,odomOnZ)"""
 
-	"""#Publishing pos for other drones
-	pos.x=currentPosition[0]
-	pos.y=currentPosition[1]
-	pos.z=currentPosition[2]
-	pubPos.publish(pos)"""
-	#print("pos odom: ",msg.pose.pose.position.x," [] ", msg.pose.pose.position.y," [] ", msg.pose.pose.position.z)
-	#print("pos with magouille: ",currentPosition)
-	followLeader(currentPosition)
+
+
+def PIDController(pos):
+    
+	global Speed
+	a=1#can be change to change reactiveness of the drone
+	obj=safe_dist
+
+	print ("pos: ",pos)
+	#print ("obj: ", obj)	
+
+	m = 1 #Number of meter around the point at which the drone start to slow  
+
+
+	#Computing wanted speed
+	if abs(pos[0]-obj[0])<m:
+		WVx=abs((pos[0]-obj[0])/m)
+	else:
+		WVx=1.0
+	if abs(pos[1]-obj[1])<m:				
+		WVy=abs((pos[1]-obj[1])/m)
+	else:
+		WVy=1.0
+	if abs(pos[2]-obj[2])<m:
+		WVz=abs((pos[2]-obj[2])/m)
+	else:
+		WVz=1.0
+
+	WVx/=3
+	WVy/=3
+	WVz/=3
+
+	#Computing controls according to current V
+	#Function used is f(x)=x/(x+a)
+	Xcoeff=(WVx-Speed[0])/(abs(WVx-Speed[0])+a)
+	Ycoeff=(WVy-Speed[1])/(abs(WVy-Speed[1])+a)
+	Zcoeff=(WVz-Speed[2])/(abs(WVz-Speed[2])+a)
+
+	
+
+
+	return (Xcoeff,Ycoeff,Zcoeff)
+
+"""Update the global position"""
+def updatePosition(posX,posY,posZ):
+	global currentPosition
+	global lastPosition
+	global Speed
+	global lastPosTime
+	global posTime
+	global posLog
+	global speedLog
+	global cnt
+
+	lastPosTime=posTime
+	lastPosition=currentPosition
+
+	currentPosition=(posX, posY, posZ)
+	posTime=time.time()
+
+	dt=posTime-lastPosTime
+
+	hour=time.strftime("%Ih%Mm%Ss")
+	posLog.write(hour+" --- "+str(currentPosition)+"\n")
+
+	"""print("pos")
+	print (currentPosition)
+	print (lastPosition)
+	print("time")
+	print (posTime)
+	print (lastPosTime)"""
+
+	#Avoid a jump in speed values when switching from
+	#odom pos to alvar pos for the 1st time
+	if following==True:
+    		
+			if dt>0.1:
+				Vx=(currentPosition[0]-lastPosition[0])/(dt)
+				Vy=(currentPosition[1]-lastPosition[1])/(dt)
+				Vz=(currentPosition[2]-lastPosition[2])/(dt)
+
+				Speed=(Vx,Vy,Vz)
+
+				speedLog.write(hour+" --- "+str(Speed)+"\n")
+				speedLog.write("T POS:"+str(posTime)+" --- T Last POS:"+ str(lastPosTime)+"\n")
+				#speedLog.write("Dt:"+ str(posTime-lastPosTime) +"\n")
+				print("Speed: ",Speed)
+
+				followLeader(currentPosition)
 
 
 def followLeader(pos):
 
-
-	#print("ici")
 	#Follows the drone's leader
 	if following == True:
 		#print('ici')
     	#Allowed error on position
-		epsilon=[0.2,0.2,0.1]
+		epsilon=[0.05,0.1,0.1]
 
 		#init twist X Y Z
 		twist = Twist()
@@ -183,12 +256,12 @@ def followLeader(pos):
 		print("x=",twist.linear.x)
 
 		#Movement condition on Y
-		if currentPosition[1] < safe_dist[1]-epsilon[1]:
-			twist.linear.y = -control[1]
-		elif currentPosition[1] > safe_dist[1]+epsilon[1]:
+		"""if currentPosition[1] < safe_dist[1]-epsilon[1]:
 			twist.linear.y = control[1]
+		elif currentPosition[1] > safe_dist[1]+epsilon[1]:
+			twist.linear.y = -control[1]
 		else :
-			twist.linear.y = 0.0
+			twist.linear.y = 0.0"""
 		
 		print("y=",twist.linear.y)
 
@@ -200,7 +273,7 @@ def followLeader(pos):
 		else :
 			twist.linear.z = 0.0"""
 		
-		#print("z=",twist.linear.z)
+		print("z=",twist.linear.z)
 
 		pub.publish(twist)
 
@@ -213,27 +286,32 @@ def getKey():
 
 
 if __name__=="__main__":
-
+	
+	#Name init
 	if len(sys.argv) == 1:
 		name="bebop"
 
 	else:
 		name=str(argv[1])
 
+	init_log_file()
+
 	settings = termios.tcgetattr(sys.stdin)
-	
-	pub = rospy.Publisher('/bebop2/cmd_vel', Twist, queue_size = 1)
-	pubTakeoff = rospy.Publisher('/bebop2/takeoff', Empty, queue_size = 1)
-	pubLand = rospy.Publisher('/bebop2/land', Empty, queue_size = 1)
+
+	#Topics init
+	pub = rospy.Publisher("/"+name+"/cmd_vel", Twist, queue_size = 1)
+	pubTakeoff = rospy.Publisher("/"+name+'/takeoff', Empty, queue_size = 1)
+	pubLand = rospy.Publisher('/'+name+'/land', Empty, queue_size = 1)
 	pubPos = rospy.Publisher(name+'_Pos', Point, queue_size = 1)	
 	rospy.init_node('follow_ar', anonymous= True, disable_signals=True)
 	
 
 	start = raw_input("bebop2: Take off? ")
+
 	#start="yes"
 	if start == "yes":
-		rospy.Subscriber("/bebop2/odom", Odometry, odometry_callback)
-		sub = rospy.Subscriber("/ar_pose_marker", AlvarMarkers, alvar_callback)
+		rospy.Subscriber('/'+name+"/odom", Odometry, odometry_callback)
+		sub = rospy.Subscriber("/ar_pose_marker", AlvarMarkers, alvar_callback, queue_size = 1)
 		print("Take off")
 		pubTakeoff.publish()
 		
@@ -282,7 +360,7 @@ if __name__=="__main__":
 					twist = Twist()
 					twist.linear.x = x; twist.linear.y = y; twist.linear.z = z;
 					twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = th
-					print(twist)				
+					#print(twist)				
 					pub.publish(twist)
 			except:
 				print ("Error! Exit")
@@ -293,7 +371,8 @@ if __name__=="__main__":
 			twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = 0.0
 			pub.publish(twist)
 			pubLand.publish()
-			print("Land!")	    		
+			print("Land!")
+			close_log_file()   		
 			termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
 	else:
 		print("No start")
