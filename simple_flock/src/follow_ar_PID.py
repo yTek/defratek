@@ -7,6 +7,7 @@ from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty
 from ar_track_alvar_msgs.msg import AlvarMarkers
 from subprocess import call
+from numpy import sign
 
 import sys, select, termios, tty, time
 
@@ -59,7 +60,7 @@ speedLog=None
 following=False
 
 #Position offset constant
-safe_dist = (1.5,0.0,0.0)
+safe_dist = (1.0,0.0,0.0)
 
 def init_log_file():
 
@@ -167,17 +168,17 @@ def PIDController(pos):
 
 	#Computing wanted speed
 	if abs(pos[0]-obj[0])<m:
-		WVx=abs((pos[0]-obj[0])/m)
+		WVx=(pos[0]-obj[0])/m
 	else:
-		WVx=1.0
+		WVx=sign(pos[0]-obj[0])
 	if abs(pos[1]-obj[1])<m:				
-		WVy=abs((pos[1]-obj[1])/m)
+		WVy=(pos[1]-obj[1])/m
 	else:
-		WVy=1.0
+		WVy=sign(pos[1]-obj[1])
 	if abs(pos[2]-obj[2])<m:
-		WVz=abs((pos[2]-obj[2])/m)
+		WVz=(pos[2]-obj[2])/m
 	else:
-		WVz=1.0
+		WVz=sign(pos[2]-obj[2])
 
 	WVx/=3
 	WVy/=3
@@ -188,6 +189,8 @@ def PIDController(pos):
 	Xcoeff=(WVx-Speed[0])/(abs(WVx-Speed[0])+a)
 	Ycoeff=(WVy-Speed[1])/(abs(WVy-Speed[1])+a)
 	Zcoeff=(WVz-Speed[2])/(abs(WVz-Speed[2])+a)
+	
+	#print("Xcoef =",Xcoeff,"; Ycoef = ",Ycoeff," ; Zcoef = ", Zcoeff)
 
 	return (Xcoeff,Ycoeff,Zcoeff)
 
@@ -233,7 +236,7 @@ def followLeader(pos):
 
 		#Movement condition on X
 		if currentPosition[0] < safe_dist[0]-epsilon[0]:
-			twist.linear.x = -control[0]
+			twist.linear.x = control[0]
 		elif currentPosition[0] > safe_dist[0]+epsilon[0]:
 			twist.linear.x = control[0]
 		else:
@@ -242,14 +245,14 @@ def followLeader(pos):
 		print("x=",twist.linear.x)
 
 		#Movement condition on Y
-		"""if currentPosition[1] < safe_dist[1]-epsilon[1]:
+		if currentPosition[1] < safe_dist[1]-epsilon[1]:
 			twist.linear.y = control[1]
 		elif currentPosition[1] > safe_dist[1]+epsilon[1]:
-			twist.linear.y = -control[1]
+			twist.linear.y = control[1]
 		else :
-			twist.linear.y = 0.0"""
+			twist.linear.y = 0.0
 		
-		print("y=",twist.linear.y)
+		print("y=",twist.linear.y)		
 
 		#Movement condition on Z
 		"""if currentPosition[2] < safe_dist[1]-epsilon[2]:
@@ -296,10 +299,10 @@ if __name__=="__main__":
 
 	#start="yes"
 	if start == "yes":
-		rospy.Subscriber('/'+name+"/odom", Odometry, odometry_callback)
-		sub = rospy.Subscriber("/ar_pose_marker", AlvarMarkers, alvar_callback, queue_size = 1)
+		sub_odom = rospy.Subscriber('/'+name+"/odom", Odometry, odometry_callback)
+		sub_alvar = rospy.Subscriber("/ar_pose_marker", AlvarMarkers, alvar_callback, queue_size = 1)
 		print("Take off")
-		#pubTakeoff.publish()
+		pubTakeoff.publish()
 		
 		x = 0.0
 		y = 0.0
@@ -321,17 +324,18 @@ if __name__=="__main__":
 					
 		except KeyboardInterrupt:
 			try:
-				sub.unregister()
+				sub_alvar.unregister()
+				sub_odom.unregister()
 				print "SIGNAL!!! \n MODE MANUEL ENCLENCHE"
 				print msg
 				while(1):
 					key = getKey()
 					if key in mvtBindings.keys():
 						print(key)
-						x = mvtBindings[key][0]
-						y = mvtBindings[key][1]
-						z = mvtBindings[key][2]
-						th = mvtBindings[key][3]
+						x = mvtBindings[key][0]/3.0
+						y = mvtBindings[key][1]/3.0
+						z = mvtBindings[key][2]/3.0
+						th = mvtBindings[key][3]/3.0
 						if (status == 14):
 							print msg
 						status = (status + 1) % 15
