@@ -30,8 +30,8 @@ class simframe(Frame):
 		for drone in self.master.master.dronelist:
 			self.iplist+=' '+drone['ip']
 
-		print('../Launcher_multi_drone/launch_multidrone.sh'+self.iplist)
-		#os.system('../Launcher_multi_drone/launch_multidrone.sh'+self.iplist)
+		#print('../Launcher_multi_drone/launch_multidrone.sh'+self.iplist)
+		os.system('../Launcher_multi_drone/create_launch_multidrone.sh'+self.iplist)
 
 	def startsim(self):	
 		try:
@@ -235,8 +235,7 @@ if __name__ == "__main__":
 	root = Tk()
 	dronelist=[
 	{'name':'drone1','image': Image.open('mockimg.jpg'), 'ip': '192.168.0.1'},
-	{'name':'drone2','image': Image.open('mockimg2.jpg'), 'ip': '192.168.0.2'},
-	{'name':'drone3','image': Image.open('mockimg3.jpg'), 'ip': '192.168.0.3'}
+	{'name':'drone2','image': Image.open('mockimg2.jpg'), 'ip': '192.168.0.2'}
 	]
 
 	gui = mastergui(root, dronelist)
@@ -250,12 +249,12 @@ if __name__ == "__main__":
 		root.update()
 
 		#dronelist update by external process
-		dronelist=[
+		"""dronelist=[
 		{'name':'drone1','image': Image.open('mockimg.jpg'), 'ip': '192.168.0.1'},
 		{'name':'drone2','image': Image.open('mockimg2.jpg'), 'ip': '192.168.0.2'},
 		{'name':'drone3','image': Image.open('mockimg3.jpg'), 'ip': '192.168.0.3'},
 		]
-
+		"""
 		#Tabs hot reload
 		if not len(dronelist) is len(gui.tabs.labellist):
 			print('Faire un hotreload des tabs ici')
