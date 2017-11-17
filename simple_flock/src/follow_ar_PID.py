@@ -81,6 +81,7 @@ def init_log_file():
 
 	speedLog.write("----- Log test "+date+": pos -----\n")
 
+
 def close_log_file():
     	
 	global posLog
