@@ -97,6 +97,7 @@ def close_log_file():
 
 def leader_callback(msg):
 	global leaderPosition
+	global following
 	print("Leader pos: ")
 	leaderPosition=(msg.x,msg.y,msg.z)
 	print(leaderPosition)
@@ -251,7 +252,7 @@ def followLeader(pos):
 		else:
 			twist.linear.x = 0.0
 
-		print("x=",twist.linear.x)
+		#print("x=",twist.linear.x)
 
 		#Movement condition on Y
 		if currentPosition[1] < (pos[1]-safe_dist[1])-epsilon[1]:
@@ -261,7 +262,7 @@ def followLeader(pos):
 		else :
 			twist.linear.y = 0.0
 		
-		print("y=",twist.linear.y)		
+		#print("y=",twist.linear.y)		
 
 		#Movement condition on Z
 		"""if currentPosition[2] < safe_dist[1]-epsilon[2]:
@@ -271,8 +272,8 @@ def followLeader(pos):
 		else :
 			twist.linear.z = 0.0"""
 		
-		print("z=",twist.linear.z)
-
+		#print("z=",twist.linear.z)
+		print(twist)
 		pub.publish(twist)
 
 def getKey():
@@ -287,7 +288,7 @@ if __name__=="__main__":
 	
 	#Name init
 	if len(sys.argv) == 1:
-		name="bebop2"
+		name="bebop"
 
 	else:
 		name=str(argv[1])
@@ -304,7 +305,7 @@ if __name__=="__main__":
 	rospy.init_node('follow_ar', anonymous= True, disable_signals=True)
 	
 
-	start = raw_input("bebop2: Take off? ")
+	start = raw_input(name+": Take off? ")
 
 	#start="yes"
 	if start == "yes":
@@ -322,8 +323,8 @@ if __name__=="__main__":
 		
 		a = None
 		try:
-			print("Sleep for 5 second before following")
-			time.sleep(5)
+			"""print("Sleep for 5 second before following")
+			time.sleep(5)"""
 			print("Following")
 			sub_leader = rospy.Subscriber("bebop1_Pos", Point, leader_callback)#bebop 1 is leader
 			"""time_temp = time.time()
@@ -339,6 +340,7 @@ if __name__=="__main__":
 			try:
 				sub_alvar.unregister()
 				sub_odom.unregister()
+				sub_leader.unregister()
 				print "SIGNAL!!! \n MODE MANUEL ENCLENCHE"
 				print msg
 				while(1):
@@ -363,7 +365,7 @@ if __name__=="__main__":
 					twist = Twist()
 					twist.linear.x = x; twist.linear.y = y; twist.linear.z = z;
 					twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = th
-					#print(twist)				
+					print(twist)				
 					pub.publish(twist)
 			except:
 				print ("Error! Exit")
