@@ -7,7 +7,7 @@ from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty
 from ar_track_alvar_msgs.msg import AlvarMarkers
 from subprocess import call
-from numpy import sign
+from numpy import sign,pi,cos,sin,sqrt
 
 import sys, select, termios, tty, time
 
@@ -65,6 +65,8 @@ following=False
 #Position offset constant
 safe_dist = (1.5,0.0,0.0)
 
+cap=0.0
+
 def init_log_file():
 
 	global posLog
@@ -101,7 +103,7 @@ def leader_callback(msg):
 	print("Leader pos: ")
 	leaderPosition=(msg.x,msg.y,msg.z)
 	print(leaderPosition)
-	following=True
+	#following=True
 	#Avoid a jump in speed values when switching from
 	#odom pos to alvar pos for the 1st time
 	if following==True:
@@ -126,7 +128,7 @@ def alvar_callback(msg):
 			#if time.time()-arWait>0.5:
 
 			#Updating position with alvar
-			updatePosition(leaderPosition[0]+markers.pose.pose.position.x, leaderPosition[1]+markers.pose.pose.position.y, leaderPosition[2]+markers.pose.pose.position.z)
+			updatePosition(leaderPosition[0]-markers.pose.pose.position.x, leaderPosition[1]-markers.pose.pose.position.y, leaderPosition[2]-markers.pose.pose.position.z)
 			
 			following=True
 
@@ -138,6 +140,7 @@ def odometry_callback(msg):
 	global Speed
 	global lastPosTime
 	global posTime
+	global cap
 
 	#Inverse X so that +X is aiming where the bebop camera aims
 	#Y pos is + when going left to where the camera aims
@@ -146,6 +149,7 @@ def odometry_callback(msg):
 	odomOnX= msg.pose.pose.position.x
 	odomOnY= msg.pose.pose.position.y
 	odomOnZ=msg.pose.pose.position.z
+	cap = msg.pose.pose.orientation.z
 	posTime=time.time()
 
 	#Getting the delta corresponding to the movement 
@@ -203,9 +207,9 @@ def PIDController(pos):
 	else:
 		WVz=sign(obj[2]-pos[2])
 
-	WVx/=3.0
-	WVy/=3.0
-	WVz/=3.0
+	WVx/=2.0
+	WVy/=2.0
+	WVz/=2.0
 
 	#Computing controls according to current V
 	#Function used is f(x)=x/(x+a)
@@ -245,9 +249,11 @@ def followLeader(pos_leader):
 		twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = 0.0
 
 		#Get PID control
-		control=PIDController(currentPosition)
+		global_control=PIDController(currentPosition)
+		print("Global control", global_control)
+		control = referentiel_global2drone(global_control)
 		print("Control : ",control)
-
+		"""
 		#Movement condition on X
 		if currentPosition[0] < (pos_leader[0]-safe_dist[0])-epsilon[0]:
 			twist.linear.x = control[0]
@@ -273,16 +279,27 @@ def followLeader(pos_leader):
 		#print("y=",twist.linear.y)		
 
 		#Movement condition on Z
-		"""if currentPosition[2] < safe_dist[1]-epsilon[2]:
+		if currentPosition[2] < safe_dist[1]-epsilon[2]:
 			twist.linear.z = control[2]
 		elif currentPosition[2] > safe_dist[1]+epsilon[2]:
 			twist.linear.z = -control[2]
 		else :
 			twist.linear.z = 0.0"""
-		
+		norm= sqrt((obj[0]-pos[0])**2 + (obj[1]-pos[1])**2 + (obj[2]-pos[2])**2)	
+		if norm < 0.2:
+			twist.linear.x = control[0]
+			twist.linear.y = control[1]
+			#twist.linear.z = control[2]
 		#print("z=",twist.linear.z)
 		print(twist)
 		pub.publish(twist)
+
+
+def referentiel_global2drone(pidControl):
+	theta = (-cap+1)*pi
+	xdrone= pidControl[0]*cos(theta)+pidControl[1]*sin(theta)
+	ydrone= pidControl[0]*sin(theta)+pidControl[1]*cos(theta)
+	return (xdrone,ydrone,pidControl[2])
 
 def getKey():
 	tty.setraw(sys.stdin.fileno())
