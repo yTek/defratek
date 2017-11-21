@@ -103,7 +103,7 @@ def leader_callback(msg):
 	print("Leader pos: ")
 	leaderPosition=(msg.x,msg.y,msg.z)
 	print(leaderPosition)
-	#following=True
+	following=True
 	#Avoid a jump in speed values when switching from
 	#odom pos to alvar pos for the 1st time
 	if following==True:
@@ -129,7 +129,7 @@ def alvar_callback(msg):
 
 			#Updating position with alvar
 			updatePosition(leaderPosition[0]-markers.pose.pose.position.x, leaderPosition[1]-markers.pose.pose.position.y, leaderPosition[2]-markers.pose.pose.position.z)
-			
+			print("Following")
 			following=True
 
 
@@ -160,20 +160,25 @@ def odometry_callback(msg):
 		posZ=odomOnZ-OdomlastPosition[2]
 
 		if dt>0.1:
+			print("dt: "+str(dt))
+			print("Odom: "+ str(odomOnX))
+			print("lastOdom: "+ str(OdomlastPosition[0]))
+			print("pos X: "+ str(posX))	
 			Vx=(posX)/(dt)
 			Vy=(posY)/(dt)
 			Vz=(posZ)/(dt)
 
 			Speed=(Vx,Vy,Vz)
+			print("Speed: "+str(Speed))
 
-			hour=time.strftime("%Ih%Mm%Ss")
+			"""hour=time.strftime("%Ih%Mm%Ss")
 
-			speedLog.write(hour+" --- "+str(Speed)+"\n")
+			speedLog.write(hour+" --- "+str(Speed)+"\n")"""
 			#speedLog.write("Dt:"+ str(posTime-lastPosTime) +"\n")
 			#print("Speed: ",Speed)
 
 
-		updatePosition(currentPosition[0]-posX,currentPosition[1]-posY,currentPosition[2]-posZ)
+		updatePosition(currentPosition[0]+posX,currentPosition[1]+posY,currentPosition[2]+posZ)
 
 	OdomlastPosition=(odomOnX,odomOnY,odomOnZ)
 	lastPosTime=posTime
@@ -184,11 +189,14 @@ def PIDController(pos):
     
 	global Speed
 	global leaderPosition
-	a=1.0#can be change to change reactiveness of the drone
-	obj= (leaderPosition[0]-safe_dist[0],leaderPosition[1]-safe_dist[1],leaderPosition[2]-safe_dist[2])
+
+	a=1#can be change to change reactiveness of the drone
+	leaderInDroneRef=referentiel_global2drone(leaderPosition)
+	objInDroneRef=(leaderInDroneRef[0]-safe_dist[0],leaderInDroneRef[1]-safe_dist[1],leaderInDroneRef[2]-safe_dist[2])
+	obj=referentiel_drone2global(objInDroneRef)
 
 	print ("pos: ",pos)
-	#print ("obj: ", obj)	
+	print ("obj: ", obj)	
 
 	m = 1 #Number of meter around the point at which the drone start to slow
 
@@ -207,9 +215,9 @@ def PIDController(pos):
 	else:
 		WVz=sign(obj[2]-pos[2])
 
-	WVx/=2.0
-	WVy/=2.0
-	WVz/=2.0
+	WVx/=5.0
+	WVy/=5.0
+	WVz/=5.0
 
 	#Computing controls according to current V
 	#Function used is f(x)=x/(x+a)
@@ -230,13 +238,20 @@ def updatePosition(posX,posY,posZ):
 
 	currentPosition=(posX, posY, posZ)
 
-	hour=time.strftime("%Ih%Mm%Ss")
-	posLog.write(hour+" --- "+str(currentPosition)+"\n")
+	"""hour=time.strftime("%Ih%Mm%Ss")
+	posLog.write(hour+" --- "+str(currentPosition)+"\n")"""
 
 
 
 def followLeader(pos_leader):
+    	
+	global currentPosition	
 	global safe_dist
+	
+	leaderInDroneRef=referentiel_global2drone(leaderPosition)
+	objInDroneRef=(leaderInDroneRef[0]-safe_dist[0],leaderInDroneRef[1]-safe_dist[1],leaderInDroneRef[2]-safe_dist[2])
+	obj=referentiel_drone2global(objInDroneRef)
+
 	#Follows the drone's leader
 	if following == True:
 		#print('ici')
@@ -253,40 +268,10 @@ def followLeader(pos_leader):
 		print("Global control", global_control)
 		control = referentiel_global2drone(global_control)
 		print("Control : ",control)
-		"""
-		#Movement condition on X
-		if currentPosition[0] < (pos_leader[0]-safe_dist[0])-epsilon[0]:
-			twist.linear.x = control[0]
-		elif currentPosition[0] >(pos_leader[0]-safe_dist[0])+epsilon[0]:
-			twist.linear.x = control[0]
-		else:
-			twist.linear.x = 0.0
-
-		#print("x=",twist.linear.x)
-
-		#Movement condition on Y
-		print("pos lead : ", pos_leader)
-		if currentPosition[1] < (pos_leader[1]-safe_dist[1])-epsilon[1]:
-			twist.linear.y = control[1]
-			print("1")
-		elif currentPosition[1] > (pos_leader[1]-safe_dist[1])+epsilon[1]:
-			twist.linear.y = control[1]
-			print("2")
-		else :
-			twist.linear.y = 0.0
-			print("3")
 		
-		#print("y=",twist.linear.y)		
-
-		#Movement condition on Z
-		if currentPosition[2] < safe_dist[1]-epsilon[2]:
-			twist.linear.z = control[2]
-		elif currentPosition[2] > safe_dist[1]+epsilon[2]:
-			twist.linear.z = -control[2]
-		else :
-			twist.linear.z = 0.0"""
-		norm= sqrt((obj[0]-pos[0])**2 + (obj[1]-pos[1])**2 + (obj[2]-pos[2])**2)	
-		if norm < 0.2:
+		norm= sqrt((obj[0]-currentPosition[0])**2 + (obj[1]-currentPosition[1])**2 + (obj[2]-currentPosition[2])**2)
+		print("norm: "+str(norm))
+		if norm > 0.2:
 			twist.linear.x = control[0]
 			twist.linear.y = control[1]
 			#twist.linear.z = control[2]
@@ -296,10 +281,16 @@ def followLeader(pos_leader):
 
 
 def referentiel_global2drone(pidControl):
-	theta = (-cap+1)*pi
+	theta = cap*pi
 	xdrone= pidControl[0]*cos(theta)+pidControl[1]*sin(theta)
 	ydrone= pidControl[0]*sin(theta)+pidControl[1]*cos(theta)
 	return (xdrone,ydrone,pidControl[2])
+
+def referentiel_drone2global(coordonatesDrone):
+	theta = cap*pi
+	xglobal= coordonatesDrone[0]*cos(theta)-coordonatesDrone[1]*sin(theta)
+	yglobal= coordonatesDrone[0]*sin(theta)-coordonatesDrone[1]*cos(theta)
+	return (xglobal,yglobal,coordonatesDrone[2])
 
 def getKey():
 	tty.setraw(sys.stdin.fileno())
@@ -318,7 +309,7 @@ if __name__=="__main__":
 	else:
 		name=str(argv[1])
 
-	init_log_file()
+	#init_log_file()
 
 	settings = termios.tcgetattr(sys.stdin)
 
@@ -348,18 +339,13 @@ if __name__=="__main__":
 		
 		a = None
 		try:
-			"""print("Sleep for 5 second before following")
-			time.sleep(5)"""
-			print("Following")
+			time.sleep(3)
+			print("Ready to follow")
 			sub_leader = rospy.Subscriber("bebop1_Pos", Point, leader_callback)#bebop 1 is leader
-			"""time_temp = time.time()
-			twist = Twist()"""
 			while 1:
-				"""if time.time()-time_temp > 0.2:
-					twist.linear.x = 0.0; twist.linear.y = 0.0; twist.linear.z = 0.0
-					twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = 0.0
-					pub.publish(twist)
-					time_temp = time.time()"""
+				"""
+				ghjklkjhgfh	
+				"""
 					
 		except KeyboardInterrupt:
 			try:
@@ -402,7 +388,7 @@ if __name__=="__main__":
 			pub.publish(twist)
 			pubLand.publish()
 			print("Land!")
-			close_log_file()   		
+			#close_log_file()   		
 			termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
 	else:
 		print("No start")
