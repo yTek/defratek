@@ -1,3 +1,4 @@
+#! /usr/bin/env python2.7
 #-*- coding: utf-8 -*-
 
 from time import sleep
@@ -5,6 +6,9 @@ import ttk
 from Tkinter import *
 from PIL import ImageTk, Image
 import os
+
+from drones import dronelist
+#import rospy
 
 class simframe(Frame):
 	def __init__(self, master, waypointlist):
@@ -15,8 +19,8 @@ class simframe(Frame):
 
 		self.initbutton=Button(self, text="INIT", bg='#BFA903', fg='white', command=self.initialize)
 		self.startstopbutton=Button(self, text="START", bg='green', fg='white', command=self.startsim)
-		self.landall=Button(self, text="Land All", command=self.landall)
-		self.emergencylandbutton=Button(self, text="Emergency Land All",fg='red', command=self.emergencyland)
+		self.landall=Button(self, text="       Land All       ", command=self.landall)
+		self.emergencylandbutton=Button(self, text="ALERT",fg='red', command=self.emergencyland)
 
 		self.initbutton.pack(side=LEFT, pady=4, fill=BOTH)
 		self.startstopbutton.pack(side=LEFT, pady=4, fill=BOTH)
@@ -31,7 +35,7 @@ class simframe(Frame):
 			self.iplist+=' '+drone['ip']
 
 		#print('../Launcher_multi_drone/launch_multidrone.sh'+self.iplist)
-		os.system('../Launcher_multi_drone/create_launch_multidrone.sh'+self.iplist)
+		os.system('../Launcher_multi_drone/launch_multidrone.sh'+self.iplist)
 
 	def startsim(self):	
 		try:
@@ -48,7 +52,7 @@ class simframe(Frame):
 			
 			#Toggle to stopsim if no ValueError and if waypointfinal is not empty
 			if waypointfinal:
-				self.initbutton.config(state="disabled", bg='SystemButtonFace')
+				self.initbutton.config(state="disabled")
 				self.master.addbutton.config(state="disabled")
 				self.master.generatemapbutton.config(state="disabled")
 
@@ -87,12 +91,19 @@ class simframe(Frame):
 		#Send SIGINT ou chepakoi
 
 	def landall(self):
-		pass
 		#Publish un land a tous les drones
 
+		for drone in dronelist:
+			os.system('rostopic pub --once '+drone['name']+'/land std_msgs/Empty')
+			print('rostopic pub --once '+drone['name']+'/land std_msgs/Empty')
+
 	def emergencyland(self):
-		pass
 		#Publish un emergency land a tous les drones
+
+		for drone in dronelist:
+			os.system('rostopic pub --once '+drone['name']+'/reset std_msgs/Empty')
+			print('rostopic pub --once '+drone['name']+'/reset std_msgs/Empty')
+		
 
 class waypointinput(Frame):
 	def __init__(self,master,waypointlist):
@@ -166,12 +177,91 @@ class waypointsmanager(Frame):
 
 		self.grid(row=0,column=1,sticky='wens')
 
+
 	def addwaypoint(self):
 		waypointinput(self.waypointframe, self.waypointlist)
 
 	def generatemap(self):
-		pass
+
+		#Définir l'échelle
+			#Connaitre la taille de la Frame
+		coursemap=self.master.tabs.coursemap
+		coursemap.delete("all")
+		framesize=(coursemap.winfo_width(), coursemap.winfo_height())
+			#Récupérer les valeur entrées (+0,0 pour les calculs suivants)
+		scalelist=[]
+		scalelist.append((0,0,0))
+
+		for waypoint in self.waypointlist:
+			x=float(waypoint.xinput.get())
+			y=float(waypoint.yinput.get())
+			z=float(waypoint.zinput.get())
+			if(z<1):
+				z=1.0
+			scalelist.append((x,y,z))
+			#Mesurer la distance max entre deux waypoints de la liste (prendre en compte 0,0 aussi)
+		maporigin=(0,0)
+		mapsize=(0,0)
+		for point in scalelist:
+			for otherpoint in [scalelist[i] for i in range(scalelist.index(point)+1,scalelist.__len__())]:
+					maporigin=(min(otherpoint[0], maporigin[0]), max(otherpoint[1], maporigin[1]))
+					mapsize=(max(abs(point[0]-otherpoint[0]),mapsize[0]), max(abs(point[1]-otherpoint[1]),mapsize[1]))
+
+		print(maporigin, mapsize)
+			
+			#Cette distance = taille de la Frame
+			#Rajouter des margins de 1 m sur le bord de la map
+		coursemap.xmargin = 30
+		coursemap.ymargin = 30
+		coursemap.xratio = (framesize[0]-coursemap.xmargin*2)/mapsize[0]
+		coursemap.yratio = (framesize[1]-coursemap.ymargin*2)/mapsize[1]
+		coursemap.xoffset = -maporigin[0]
+		coursemap.yoffset = -maporigin[1]
+			
+		#Générer la grid avec cette échelle
+		coursemap.xaxisstep = 1 #en mètres
+		coursemap.yaxisstep = 1 #en mètres
+
+		for xi in range(int(mapsize[0])+1):
+			coursemap.create_line(xi*coursemap.xratio+coursemap.xmargin,0,xi*coursemap.xratio+coursemap.xmargin,mapsize[1]*coursemap.yratio+2*coursemap.ymargin, stipple='gray50')
+
+		for yi in range(int(mapsize[1])+1):
+			coursemap.create_line(0,yi*coursemap.yratio+coursemap.ymargin,mapsize[0]*coursemap.xratio+2*coursemap.xmargin,yi*coursemap.yratio+coursemap.ymargin, stipple='gray50')
+
+		
+		#Créer les waypoins
+		pointsize=5
+
+		for point in scalelist:
+			if(point[0] == 0 and point[1] == 0):
+				coursemap.create_oval(((point[0]+coursemap.xoffset)*coursemap.xratio+coursemap.xmargin)-pointsize, (-(point[1]+coursemap.yoffset)*coursemap.yratio+coursemap.ymargin)-pointsize,((point[0]+coursemap.xoffset)*coursemap.xratio+coursemap.xmargin)+pointsize, (-(point[1]+coursemap.yoffset)*coursemap.yratio+coursemap.ymargin)+pointsize, outline="red", fill="red")
+				print(((point[0]+coursemap.xoffset)*coursemap.xratio+coursemap.xmargin)-pointsize, (mapsize[1]-(point[1]+coursemap.yoffset)*coursemap.yratio+coursemap.ymargin)-pointsize,((point[0]+coursemap.xoffset)*coursemap.xratio+coursemap.xmargin)+pointsize, (mapsize[1]-(point[1]+coursemap.yoffset)*coursemap.yratio+coursemap.ymargin)+pointsize)
+				print()
+			else:
+				coursemap.create_oval(((point[0]+coursemap.xoffset)*coursemap.xratio+coursemap.xmargin)-pointsize, (-(point[1]+coursemap.yoffset)*coursemap.yratio+coursemap.ymargin)-pointsize,((point[0]+coursemap.xoffset)*coursemap.xratio+coursemap.xmargin)+pointsize, (-(point[1]+coursemap.yoffset)*coursemap.yratio+coursemap.ymargin)+pointsize, outline="blue", fill="blue")
+				print(((point[0]+coursemap.xoffset)*coursemap.xratio+coursemap.xmargin)-pointsize, (mapsize[1]-(point[1]+coursemap.yoffset)*coursemap.yratio+coursemap.ymargin)-pointsize,((point[0]+coursemap.xoffset)*coursemap.xratio+coursemap.xmargin)+pointsize, (mapsize[1]-(point[1]+coursemap.yoffset)*coursemap.yratio+coursemap.ymargin)+pointsize)
+	
+				#Créer les points des drones (dans la fonction startsim)
+
+
+		
+		
+
 		#generate the map
+class mapcanvas(Canvas):
+	def __init__(self, master):
+		Canvas.__init__(self, master)
+
+		self.xmargin = 0
+		self.ymargin = 0
+		self.xratio = 0
+		self.yratio = 0
+		self.xoffset = 0
+		self.yoffset = 0
+			
+		#Générer la grid avec cette échelle
+		self.xaxisstep = 1 #en mètres
+		self.yaxisstep = 1 #en mètres
 
 class term(Frame):
 	def __init__(self, master, size, color):
@@ -187,6 +277,10 @@ class cameratabmanager(Frame):
 		Frame.__init__(self, master)
 
 		self.nb = ttk.Notebook(self)
+
+		self.coursemap = mapcanvas(self.nb)
+		self.nb.add(self.coursemap, text="Map")
+		
 		for drone in dronelist:
 			tab = ttk.Frame(self.nb)
 
@@ -228,15 +322,18 @@ class mastergui(Frame):
 		
 		self.terminal3 = term(self, (246,15),"white")
 		self.terminal3.grid(row=3,column=0,columnspan=2,sticky='wens')
-		"""
+"""
 
 if __name__ == "__main__":
 
 	root = Tk()
+	"""
 	dronelist=[
-	{'name':'drone1','image': Image.open('mockimg.jpg'), 'ip': '192.168.0.1'},
-	{'name':'drone2','image': Image.open('mockimg2.jpg'), 'ip': '192.168.0.2'}
+	{'name':'bebop1','image': Image.open('mockimg.jpg'), 'ip': '192.168.0.1', 'pos': (0,0,0), 'oval':None},
+	{'name':'bebop2','image': Image.open('mockimg2.jpg'), 'ip': '192.168.0.2', 'pos': (0,0,0), 'oval':None},
+	{'name':'bebop3','image': Image.open('mockimg3.jpg'), 'ip': '192.168.0.3', 'pos': (0,0,0), 'oval':None}
 	]
+	"""
 
 	gui = mastergui(root, dronelist)
 	gui.pack()
@@ -244,20 +341,42 @@ if __name__ == "__main__":
 	root.grid_columnconfigure(index=1, weight=2)
 	root.grid_rowconfigure(index=1, weight=1)
 
+
+	for drone in dronelist:
+		drone['oval']=gui.tabs.coursemap.create_oval(drone['pos'][0]-5,drone['pos'][1]-5,drone['pos'][0]+5,drone['pos'][1]+5, outline="black", fill="green")
+
+
+
+	#sub_leader = rospy.Subscriber("bebop1_Pos", Point, lambda msg : refreshposition(msg, 1))#bebop 1 is leader
+
 	while True:
 		root.update_idletasks()
 		root.update()
-
+	
 		#dronelist update by external process
-		"""dronelist=[
+		
+		"""
+		dronelist=[
 		{'name':'drone1','image': Image.open('mockimg.jpg'), 'ip': '192.168.0.1'},
 		{'name':'drone2','image': Image.open('mockimg2.jpg'), 'ip': '192.168.0.2'},
 		{'name':'drone3','image': Image.open('mockimg3.jpg'), 'ip': '192.168.0.3'},
 		]
 		"""
+
+		#Drone reload on canvas
+		for drone in dronelist:
+			gui.tabs.coursemap.delete(drone['oval'])
+			#gui.tabs.coursemap.create_oval(((drone['pos'][0]+gui.tabs.coursemap.xoffset)*gui.tabs.coursemap.xratio+gui.tabs.coursemap.xmargin)-1, (-(drone['pos'][1]+gui.tabs.coursemap.yoffset)*gui.tabs.coursemap.yratio+gui.tabs.coursemap.ymargin)-1,((drone['pos'][0]+gui.tabs.coursemap.xoffset)*gui.tabs.coursemap.xratio+gui.tabs.coursemap.xmargin)+1, (-(drone['pos'][1]+gui.tabs.coursemap.yoffset)*gui.tabs.coursemap.yratio+gui.tabs.coursemap.ymargin)+1, outline="green", fill="green")
+			drone['oval']=gui.tabs.coursemap.create_oval(((drone['pos'][0]+gui.tabs.coursemap.xoffset)*gui.tabs.coursemap.xratio+gui.tabs.coursemap.xmargin)-5, (-(drone['pos'][1]+gui.tabs.coursemap.yoffset)*gui.tabs.coursemap.yratio+gui.tabs.coursemap.ymargin)-5,((drone['pos'][0]+gui.tabs.coursemap.xoffset)*gui.tabs.coursemap.xratio+gui.tabs.coursemap.xmargin)+5, (-(drone['pos'][1]+gui.tabs.coursemap.yoffset)*gui.tabs.coursemap.yratio+gui.tabs.coursemap.ymargin)+5, outline="black", fill="green")
+
+			#gui.tabs.coursemap.itemconfig(drone['oval'], fill="blue")
+
+		"""
 		#Tabs hot reload
 		if not len(dronelist) is len(gui.tabs.labellist):
 			print('Faire un hotreload des tabs ici')
+
+		"""
 
 		"""
 		#Camera hot reload
@@ -268,3 +387,7 @@ if __name__ == "__main__":
 				imagetemp[drone['name']] = ImageTk.PhotoImage(drone['image'].resize((int(drone['image'].size[0]*0.7),int(drone['image'].size[1]*0.7)), Image.ANTIALIAS))
 				gui.tabs.labellist[drone['name']].configure(image=imagetemp[drone['name']])
 		"""
+
+def refreshposition(msg,dronenumber):
+	global dronelist
+	dronelist[dronenumber-1]['pos']=(msg.x,msg.y,msg.z)
