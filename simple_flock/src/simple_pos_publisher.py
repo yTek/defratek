@@ -26,14 +26,15 @@ if __name__=="__main__":
 	rospy.init_node('publisher_test', anonymous= True)
 
 	p=Point()
-	p.x=2.50
+	p.x=-2.5
 	p.y=0.0
-	p.z=0.0
+	p.z=1.0
 
 	print("Point: "+str(p))	
-
-	while 1:
-		time.sleep(1)
-		pubPos.publish(p)
-		print("Point: "+str(p))	
-
+	try:
+		while 1:
+			time.sleep(0.2)
+			pubPos.publish(p)
+			print("Point: "+str(p))	
+	except KeyboardInterrupt:
+		print("end")

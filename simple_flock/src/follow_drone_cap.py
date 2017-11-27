@@ -103,7 +103,7 @@ def leader_callback(msg):
 	print("Leader pos: ")
 	leaderPosition=(msg.x,msg.y,msg.z)
 	print(leaderPosition)
-	following=True
+	#following=True
 	#Avoid a jump in speed values when switching from
 	#odom pos to alvar pos for the 1st time
 	if following==True:
@@ -128,7 +128,12 @@ def alvar_callback(msg):
 			#if time.time()-arWait>0.5:
 
 			#Updating position with alvar
-			updatePosition(leaderPosition[0]-markers.pose.pose.position.x, leaderPosition[1]-markers.pose.pose.position.y, leaderPosition[2]-markers.pose.pose.position.z)
+			leaderInDroneRef=referentiel_global2drone(leaderPosition)
+			objInDroneRef=(leaderInDroneRef[0]-markers.pose.pose.position.x,leaderInDroneRef[1] + markers.pose.pose.position.y,leaderInDroneRef[2]+markers.pose.pose.position.z)
+			print("IN DRONE REF POS:",objInDroneRef)
+			obj=referentiel_drone2global(objInDroneRef)
+			print("GLOBAL REF POS:",obj)
+			updatePosition(obj[0], obj[1],obj[2])
 			print("Following")
 			following=True
 
@@ -160,16 +165,16 @@ def odometry_callback(msg):
 		posZ=odomOnZ-OdomlastPosition[2]
 
 		if dt>0.1:
-			print("dt: "+str(dt))
-			print("Odom: "+ str(odomOnX))
-			print("lastOdom: "+ str(OdomlastPosition[0]))
-			print("pos X: "+ str(posX))	
+			#print("dt: "+str(dt))
+			#print("Odom: "+ str(odomOnX))
+			#print("lastOdom: "+ str(OdomlastPosition[0]))
+			#print("pos X: "+ str(posX))	
 			Vx=(posX)/(dt)
 			Vy=(posY)/(dt)
 			Vz=(posZ)/(dt)
 
 			Speed=(Vx,Vy,Vz)
-			print("Speed: "+str(Speed))
+			#print("Speed: "+str(Speed))
 
 			"""hour=time.strftime("%Ih%Mm%Ss")
 
@@ -226,7 +231,7 @@ def PIDController(pos):
 	Ycoeff=(WVy-Speed[1])/(abs(WVy-Speed[1])+a)
 	Zcoeff=(WVz-Speed[2])/(abs(WVz-Speed[2])+a)
 	
-	print("Xcoef =",Xcoeff,"; Ycoef = ",Ycoeff," ; Zcoef = ", Zcoeff)
+	#print("Xcoef =",Xcoeff,"; Ycoef = ",Ycoeff," ; Zcoef = ", Zcoeff)
 
 	return (Xcoeff,Ycoeff,Zcoeff)
 
@@ -237,7 +242,7 @@ def updatePosition(posX,posY,posZ):
 	global speedLog
 
 	currentPosition=(posX, posY, posZ)
-
+	print("Current pos: ", currentPosition)
 	"""hour=time.strftime("%Ih%Mm%Ss")
 	posLog.write(hour+" --- "+str(currentPosition)+"\n")"""
 
@@ -269,7 +274,7 @@ def followLeader(pos_leader):
 		control = referentiel_global2drone(global_control)
 		print("Control : ",control)
 		
-		norm= sqrt((obj[0]-currentPosition[0])**2 + (obj[1]-currentPosition[1])**2 + (obj[2]-currentPosition[2])**2)
+		norm= sqrt((obj[0]-currentPosition[0])**2 + (obj[1]-currentPosition[1])**2)
 		print("norm: "+str(norm))
 		if norm > 0.2:
 			twist.linear.x = control[0]
@@ -283,13 +288,13 @@ def followLeader(pos_leader):
 def referentiel_global2drone(pidControl):
 	theta = cap*pi
 	xdrone= pidControl[0]*cos(theta)+pidControl[1]*sin(theta)
-	ydrone= pidControl[0]*sin(theta)+pidControl[1]*cos(theta)
+	ydrone= -pidControl[0]*sin(theta)+pidControl[1]*cos(theta)
 	return (xdrone,ydrone,pidControl[2])
 
 def referentiel_drone2global(coordonatesDrone):
 	theta = cap*pi
 	xglobal= coordonatesDrone[0]*cos(theta)-coordonatesDrone[1]*sin(theta)
-	yglobal= coordonatesDrone[0]*sin(theta)-coordonatesDrone[1]*cos(theta)
+	yglobal= coordonatesDrone[0]*sin(theta)+coordonatesDrone[1]*cos(theta)
 	return (xglobal,yglobal,coordonatesDrone[2])
 
 def getKey():
@@ -307,7 +312,7 @@ if __name__=="__main__":
 		name="bebop"
 
 	else:
-		name=str(argv[1])
+		name=str(sys.argv[1])
 
 	#init_log_file()
 

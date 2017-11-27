@@ -8,7 +8,9 @@ from PIL import ImageTk, Image
 import os
 
 from drones import dronelist
-#import rospy
+import rospy
+from geometry_msgs.msg import Point
+import subprocess
 
 class simframe(Frame):
 	def __init__(self, master, waypointlist):
@@ -28,14 +30,20 @@ class simframe(Frame):
 		self.emergencylandbutton.pack(side=LEFT, pady=4, fill=BOTH)
 
 	def initialize(self):
-		pass
 		#Init les launch
 		self.iplist=''
 		for drone in self.master.master.dronelist:
 			self.iplist+=' '+drone['ip']
 
 		#print('../Launcher_multi_drone/launch_multidrone.sh'+self.iplist)
-		os.system('../Launcher_multi_drone/launch_multidrone.sh'+self.iplist)
+		#os.system('../Launcher_multi_drone/launch_multidrone.sh'+self.iplist)
+
+		#subprocess.Popen(['gnome-terminal', '-x', 'roslaunch','bebop_driver','bebop_node.launch'],shell=False)
+		subprocess.Popen(['gnome-terminal', '-x', 'roslaunch','bebop_driver','bebop_node_bebop1.launch'],shell=False)
+		rospy.init_node('interface', anonymous= True)
+
+		sub_leader = rospy.Subscriber("bebop1_Pos", Point, lambda msg : refreshposition(msg, 1))#bebop 1 is leader
+
 
 	def startsim(self):	
 		try:
@@ -324,16 +332,15 @@ class mastergui(Frame):
 		self.terminal3.grid(row=3,column=0,columnspan=2,sticky='wens')
 """
 
+
+def refreshposition(msg,dronenumber):
+	print("SALUUUT")
+	global dronelist
+	dronelist[dronenumber-1]['pos']=(msg.x,msg.y,msg.z)
+
 if __name__ == "__main__":
 
 	root = Tk()
-	"""
-	dronelist=[
-	{'name':'bebop1','image': Image.open('mockimg.jpg'), 'ip': '192.168.0.1', 'pos': (0,0,0), 'oval':None},
-	{'name':'bebop2','image': Image.open('mockimg2.jpg'), 'ip': '192.168.0.2', 'pos': (0,0,0), 'oval':None},
-	{'name':'bebop3','image': Image.open('mockimg3.jpg'), 'ip': '192.168.0.3', 'pos': (0,0,0), 'oval':None}
-	]
-	"""
 
 	gui = mastergui(root, dronelist)
 	gui.pack()
@@ -347,21 +354,11 @@ if __name__ == "__main__":
 
 
 
-	#sub_leader = rospy.Subscriber("bebop1_Pos", Point, lambda msg : refreshposition(msg, 1))#bebop 1 is leader
+	#sub_leader = rospy.Subscriber("/bebop1_Pos", Point, refreshposition1)#bebop 1 is leader
 
 	while True:
 		root.update_idletasks()
 		root.update()
-	
-		#dronelist update by external process
-		
-		"""
-		dronelist=[
-		{'name':'drone1','image': Image.open('mockimg.jpg'), 'ip': '192.168.0.1'},
-		{'name':'drone2','image': Image.open('mockimg2.jpg'), 'ip': '192.168.0.2'},
-		{'name':'drone3','image': Image.open('mockimg3.jpg'), 'ip': '192.168.0.3'},
-		]
-		"""
 
 		#Drone reload on canvas
 		for drone in dronelist:
@@ -388,6 +385,4 @@ if __name__ == "__main__":
 				gui.tabs.labellist[drone['name']].configure(image=imagetemp[drone['name']])
 		"""
 
-def refreshposition(msg,dronenumber):
-	global dronelist
-	dronelist[dronenumber-1]['pos']=(msg.x,msg.y,msg.z)
+

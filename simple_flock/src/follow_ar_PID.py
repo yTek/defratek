@@ -159,7 +159,7 @@ def odometry_callback(msg):
 def PIDController(pos):
     
 	global Speed
-	a=1#can be change to change reactiveness of the drone
+	a=1.0#can be change to change reactiveness of the drone
 	obj=safe_dist
 
 	print ("pos: ",pos)
@@ -181,9 +181,9 @@ def PIDController(pos):
 	else:
 		WVz=sign(pos[2]-obj[2])
 
-	WVx/=3
-	WVy/=3
-	WVz/=3
+	WVx/=2
+	WVy/=2
+	WVz/=2
 
 	#Computing controls according to current V
 	#Function used is f(x)=x/(x+a)
@@ -282,7 +282,7 @@ if __name__=="__main__":
 		name="bebop"
 
 	else:
-		name=str(argv[1])
+		name=str(sys.argv[1])
 
 	init_log_file()
 
@@ -301,7 +301,7 @@ if __name__=="__main__":
 	#start="yes"
 	if start == "yes":
 		sub_odom = rospy.Subscriber('/'+name+"/odom", Odometry, odometry_callback)
-		sub_alvar = rospy.Subscriber("/ar_pose_marker", AlvarMarkers, alvar_callback, queue_size = 1)
+		
 		print("Take off")
 		pubTakeoff.publish()
 		
@@ -313,7 +313,8 @@ if __name__=="__main__":
 		
 		a = None
 		try:
-			#time.sleep(3)
+			time.sleep(5)
+			sub_alvar = rospy.Subscriber("/ar_pose_marker", AlvarMarkers, alvar_callback, queue_size = 1)
 			"""time_temp = time.time()
 			twist = Twist()"""
 			while 1:
