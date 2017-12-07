@@ -35,14 +35,12 @@ class simframe(Frame):
 		for drone in self.master.master.dronelist:
 			self.iplist+=' '+drone['ip']
 
-		#print('../Launcher_multi_drone/launch_multidrone.sh'+self.iplist)
-		#os.system('../Launcher_multi_drone/launch_multidrone.sh'+self.iplist)
+			#print('../Launcher_multi_drone/launch_multidrone.sh'+self.iplist)
+			#os.system('../Launcher_multi_drone/launch_multidrone.sh'+self.iplist)
+			subprocess.Popen(['gnome-terminal', '-x', 'roslaunch','bebop_driver','bebop_node_'+ drone['name'] +'.launch'],shell=False)
+			rospy.init_node('interface', anonymous= True)
 
-		#subprocess.Popen(['gnome-terminal', '-x', 'roslaunch','bebop_driver','bebop_node.launch'],shell=False)
-		subprocess.Popen(['gnome-terminal', '-x', 'roslaunch','bebop_driver','bebop_node_bebop1.launch'],shell=False)
-		rospy.init_node('interface', anonymous= True)
-
-		sub_leader = rospy.Subscriber(drone['name']+"_Pos", Point, lambda msg : refreshposition(msg, 1))#bebop 1 is leader
+			sub_leader = rospy.Subscriber(drone['name']+'_Pos', Point, lambda msg : refreshposition(msg, self.master.master.dronelist.index(drone))
 
 
 	def startsim(self):	
