@@ -181,9 +181,9 @@ def PIDController(pos):
 	else:
 		WVz=sign(pos[2]-obj[2])
 
-	WVx/=2
-	WVy/=2
-	WVz/=2
+	WVx/=3
+	WVy/=3
+	WVz/=3
 
 	#Computing controls according to current V
 	#Function used is f(x)=x/(x+a)
@@ -296,9 +296,9 @@ if __name__=="__main__":
 	rospy.init_node('follow_ar', anonymous= True, disable_signals=True)
 	
 
-	start = raw_input("bebop2: Take off? ")
+	#start = raw_input("bebop2: Take off? ")
 
-	#start="yes"
+	start="yes"
 	if start == "yes":
 		sub_odom = rospy.Subscriber('/'+name+"/odom", Odometry, odometry_callback)
 		

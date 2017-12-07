@@ -40,11 +40,19 @@ class simframe(Frame):
 			subprocess.Popen(['gnome-terminal', '-x', 'roslaunch','bebop_driver','bebop_node_'+ drone['name'] +'.launch'],shell=False)
 			rospy.init_node('interface', anonymous= True)
 
-			sub_leader = rospy.Subscriber(drone['name']+'_Pos', Point, lambda msg : refreshposition(msg, self.master.master.dronelist.index(drone))
+			sub_leader = rospy.Subscriber(drone['name']+'_Pos', Point, lambda msg : refreshposition(msg, self.master.master.dronelist.index(drone)))
 
 
 	def startsim(self):	
 		try:
+			"""
+			for drone in dronelist:
+				os.system('rostopic pub --once '+drone['name']+'/takeoff std_msgs/Empty &')
+				print('rostopic pub --once '+drone['name']+'/takeoff std_msgs/Empty')			
+			"""
+			os.system('rosrun prise_en_main tele_op_drone.py &')
+			#os.system('rostopic pub --once '+drone['name']+'/takeoff std_msgs/Empty &')
+
 			#Read all waypoints
 			waypointfinal=[]
 			
@@ -99,16 +107,20 @@ class simframe(Frame):
 	def landall(self):
 		#Publish un land a tous les drones
 
+		
 		for drone in dronelist:
-			os.system('rostopic pub --once '+drone['name']+'/land std_msgs/Empty')
-			print('rostopic pub --once '+drone['name']+'/land std_msgs/Empty')
+			os.system('rostopic pub --once '+drone['name']+'/land std_msgs/Empty &')
+			print('rostopic pub --once '+drone['name']+'/land std_msgs/Empty &')
+		
 
 	def emergencyland(self):
 		#Publish un emergency land a tous les drones
 
+		
 		for drone in dronelist:
-			os.system('rostopic pub --once '+drone['name']+'/reset std_msgs/Empty')
+			os.system('rostopic pub --once '+drone['name']+'/reset std_msgs/Empty &')
 			print('rostopic pub --once '+drone['name']+'/reset std_msgs/Empty')
+		
 		
 
 class waypointinput(Frame):
