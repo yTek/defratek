@@ -42,7 +42,7 @@ class simframe(Frame):
 		subprocess.Popen(['gnome-terminal', '-x', 'roslaunch','bebop_driver','bebop_node_bebop1.launch'],shell=False)
 		rospy.init_node('interface', anonymous= True)
 
-		sub_leader = rospy.Subscriber("bebop1_Pos", Point, lambda msg : refreshposition(msg, 1))#bebop 1 is leader
+		sub_leader = rospy.Subscriber(drone['name']+"_Pos", Point, lambda msg : refreshposition(msg, 1))#bebop 1 is leader
 
 
 	def startsim(self):	
