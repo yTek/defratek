@@ -19,6 +19,8 @@ class simframe(Frame):
 
 		Frame.__init__(self, master)
 
+		self.subprocesslist = []
+
 		self.initbutton=Button(self, text="INIT", bg='#BFA903', fg='white', command=self.initialize)
 		self.startstopbutton=Button(self, text="START", bg='green', fg='white', command=self.startsim)
 		self.landall=Button(self, text="       Land All       ", command=self.landall)
@@ -32,12 +34,15 @@ class simframe(Frame):
 	def initialize(self):
 		#Init les launch
 		self.iplist=''
+
+		del self.subprocesslist[:]
+
 		for drone in self.master.master.dronelist:
 			self.iplist+=' '+drone['ip']
 
 			#print('../Launcher_multi_drone/launch_multidrone.sh'+self.iplist)
 			#os.system('../Launcher_multi_drone/launch_multidrone.sh'+self.iplist)
-			subprocess.Popen(['gnome-terminal', '-x', 'roslaunch','bebop_driver','bebop_node_'+ drone['name'] +'.launch'],shell=False)
+			self.subprocesslist.append(subprocess.Popen(['gnome-terminal', '-x', 'roslaunch','bebop_driver','bebop_node_'+ drone['name'] +'.launch'],shell=False))
 			rospy.init_node('interface', anonymous= True)
 
 			sub_leader = rospy.Subscriber(drone['name']+'_Pos', Point, lambda msg : refreshposition(msg, self.master.master.dronelist.index(drone)))
