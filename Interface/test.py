@@ -35,10 +35,8 @@ class simframe(Frame):
 		#Init les launch
 		self.iplist=''
 		
-		for process in self.subprocesslist:
-			process.terminate()
-
-		del self.subprocesslist[:]
+		for _ in self.subprocesslist:
+			subprocesslist.pop().terminate()
 
 
 		for drone in self.master.master.dronelist:
