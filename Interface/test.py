@@ -34,8 +34,12 @@ class simframe(Frame):
 	def initialize(self):
 		#Init les launch
 		self.iplist=''
+		
+		for process in self.subprocesslist:
+			process.terminate()
 
 		del self.subprocesslist[:]
+
 
 		for drone in self.master.master.dronelist:
 			self.iplist+=' '+drone['ip']
