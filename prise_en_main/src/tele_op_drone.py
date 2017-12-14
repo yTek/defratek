@@ -72,8 +72,7 @@ if __name__=="__main__":
 	pubPos = rospy.Publisher('/bebop1_Pos', Point, queue_size = 1)
 	rospy.init_node('teleop_test', anonymous= True)
 	
-	#start = raw_input("Take off? ")
-	start = "yes"	
+	start = raw_input("Take off? ")
 	if start == "yes":
 		
 		print("Take off")

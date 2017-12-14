@@ -50,7 +50,7 @@ class simframe(Frame):
 				os.system('rostopic pub --once '+drone['name']+'/takeoff std_msgs/Empty &')
 				print('rostopic pub --once '+drone['name']+'/takeoff std_msgs/Empty')			
 			"""
-			os.system('rosrun prise_en_main tele_op_drone.py &')
+			#os.system('rosrun prise_en_main tele_op_drone.py &')
 			#os.system('rostopic pub --once '+drone['name']+'/takeoff std_msgs/Empty &')
 
 			#Read all waypoints
@@ -331,7 +331,7 @@ class mastergui(Frame):
 		#waypointsbim = Frame(master)
 		self.waypoint = waypointsmanager(self)
 		
-		"""
+		
 		self.terminal = term(self, (246,15), "white")
 		self.terminal.grid(row=1,column=0,columnspan=2,sticky='wens')
 		
@@ -340,7 +340,7 @@ class mastergui(Frame):
 		
 		self.terminal3 = term(self, (246,15),"white")
 		self.terminal3.grid(row=3,column=0,columnspan=2,sticky='wens')
-"""
+
 
 
 def refreshposition(msg,dronenumber):

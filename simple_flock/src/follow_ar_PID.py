@@ -26,12 +26,12 @@ msg= """Mode Manuel
 	"""
 
 mvtBindings = {
-		'z':(1.0,0,0,0),
-		's':(-1.0,0,0,0),
-		'q':(0,1.0,0,0),
-		'd':(0,-1.0,0,0),
-		'j':(0,0,0,1.0),
-		'l':(0,0,0,-1.0),
+		'z':(0.5,0,0,0),
+		's':(-0.5,0,0,0),
+		'q':(0,0.5,0,0),
+		'd':(0,-0.5,0,0),
+		'j':(0,0,0,0.5),
+		'l':(0,0,0,-0.5),
 		'i':(0,0,1.0,0),
 		'k':(0,0,-1.0,0),
 	       }
@@ -60,7 +60,7 @@ speedLog=None
 following=False
 
 #Position offset constant
-safe_dist = (1.0,0.0,0.0)
+safe_dist = (1.5,0.0,0.0)
 
 def init_log_file():
 
@@ -225,7 +225,7 @@ def followLeader(pos):
 	if following == True:
 		#print('ici')
     	#Allowed error on position
-		epsilon=[0.1,0.1,0.1]
+		epsilon=[0.05,0.05,0.075]
 
 		#init twist X Y Z
 		twist = Twist()
@@ -256,12 +256,12 @@ def followLeader(pos):
 		print("y=",twist.linear.y)		
 
 		#Movement condition on Z
-		"""if currentPosition[2] < safe_dist[1]-epsilon[2]:
-			twist.linear.z = control[2]
-		elif currentPosition[2] > safe_dist[1]+epsilon[2]:
-			twist.linear.z = -control[2]
+		if currentPosition[2] < safe_dist[2]-epsilon[2]:
+			twist.linear.z = -0.2
+		elif currentPosition[2] > safe_dist[2]+epsilon[2]:
+			twist.linear.z = 0.2
 		else :
-			twist.linear.z = 0.0"""
+			twist.linear.z = 0.0
 		
 		print("z=",twist.linear.z)
 
@@ -286,8 +286,7 @@ if __name__=="__main__":
 
 	init_log_file()
 
-	settings = termios.tcgetattr(sys.stdin)
-
+	name = 'bebop2'
 	#Topics init
 	pub = rospy.Publisher("/"+name+"/cmd_vel", Twist, queue_size = 1)
 	pubTakeoff = rospy.Publisher("/"+name+'/takeoff', Empty, queue_size = 1)
@@ -296,9 +295,9 @@ if __name__=="__main__":
 	rospy.init_node('follow_ar', anonymous= True, disable_signals=True)
 	
 
-	#start = raw_input("bebop2: Take off? ")
+	start = raw_input("bebop2: Take off? ")
 
-	start="yes"
+	#start="yes"
 	if start == "yes":
 		sub_odom = rospy.Subscriber('/'+name+"/odom", Odometry, odometry_callback)
 		
@@ -328,6 +327,7 @@ if __name__=="__main__":
 			try:
 				sub_alvar.unregister()
 				sub_odom.unregister()
+				settings = termios.tcgetattr(sys.stdin)
 				print "SIGNAL!!! \n MODE MANUEL ENCLENCHE"
 				print msg
 				while(1):
