@@ -45,6 +45,12 @@ class flock_manager:
 		self.drones = []
 		self.posDrones = {}
 
+		#Distance ideale pour 2 drones
+		self.distanceComp2 = Point()
+		self.barycentreComp2.x = 1.5
+		self.barycentreComp2.y = 0.0
+		self.epsilon = (0.1,0.1,0.1)
+
 		self.pubCmd = {}
 		self.pubTakeoff = {}
 		self.pubLand = {}
@@ -56,16 +62,25 @@ class flock_manager:
 			self.drones.append('bebop%s'%(i+1))
 
 		for i in self.drones:
-			pubCmd[i] = rospy.Publisher("/"+i+"/cmd_vel", Twist, queue_size = 1)
+			pubCmd[i] = rospy.Publisher("/"+i+"_flockManager", Point, queue_size = 1)
 			pubTakeoff[i] = rospy.Publisher("/"+i+'/takeoff', Empty, queue_size = 1)
 			pubLand[i] = rospy.Publisher('/'+i+'/land', Empty, queue_size = 1)
 			#Besoin de 1 callback par drone ??
-			subPos[i] = rospy.Subscriber('/'+name+"_Pos", Point, pos_callback)
-			rospy.init_node('follow_ar', anonymous= True, disable_signals=True)
+			subPos[i] = rospy.Subscriber('/'+name+"_Pos", Point, lambda msg : pos_callback(msg, i))
+		
+		pubObjBary = rospy.Publisher("/flock_Manager", Point, queue_size = 1)
+		rospy.init_node('flockManager', anonymous= True, disable_signals=True)
 		
 	
 		try:
 			#Compute
+			distance = Point()
+			while 1:
+				#Composition pour 2 drones
+				if len(self.posDrones) == self.nbDrones and self.nbDrones == 2:
+					distance.x = sqrt((posDrones['bebop2'].x + posDrones['bebop1'].x)**2)
+					distance.y = sqrt((posDrones['bebop2'].y + posDrones['bebop1'].y)**2)
+					toBarycentre(distance)
 					
 		except KeyboardInterrupt:
 			try:
@@ -98,8 +113,10 @@ class flock_manager:
 					twist = Twist()
 					twist.linear.x = x; twist.linear.y = y; twist.linear.z = z;
 					twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = th
-					print(twist)				
-					pub.publish(twist)
+					print(twist)
+					for i in self.drones:
+						pubCmd[i].publish(twist)
+
 			except:
 				print ("Error! Exit")
 			
@@ -114,11 +131,23 @@ class flock_manager:
 			termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
 	
 
-	def pos_callback(msg):
+	def pos_callback(msg,droneName):
+		print ("Get position of ", droneName)
+		self.posDrones[droneName]=(msg.x,msg.y,msg.z)
 		
+	def toBarycentre (distance):
+		#Config 2 drones
+		#On fait l'hypothese qu'ils sont oriente dans le meme sens
+		#Le leader et le suiveur (qui connaissent leur statut) agissent en fonction de leur statut
+		objBarycentre = Point()
+		if distance.x > self.barycentreComp2.x + epsilon[0] or distance.x < self.barycentreComp2.x - epsilon[0]:
+			#drones trop loin  se rapprocher ou trop proche s'eloigner
+			objBarycentre.x = distance.x - self.barycentreComp2.x/2
 
-
-
+		if distance.y > self.barycentreComp2.y + epsilon[1] or distance.y < self.barycentreComp2.y - epsilon[1]:
+			objBarycentre.y = distance.y - self.barycentreComp2.y/2
+		
+		self.pubObjBary.publish(objBarycentre)
 
 if __name__=="__main__":
 	if len(sys.argv) == 1:

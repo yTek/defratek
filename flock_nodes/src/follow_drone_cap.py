@@ -65,7 +65,6 @@ class flock_manager:
 		pub = rospy.Publisher("/"+self.name+"/cmd_vel", Twist, queue_size = 1)
 		pubTakeoff = rospy.Publisher("/"+self.name+'/takeoff', Empty, queue_size = 1)
 		pubLand = rospy.Publisher('/'+self.name+'/land', Empty, queue_size = 1)
-		pubPos = rospy.Publisher(self.name+'_Pos', Point, queue_size = 1)
 		rospy.init_node('follow_ar', anonymous= True, disable_signals=True)
 		
 		start = raw_input(self.name+": Take off? ")

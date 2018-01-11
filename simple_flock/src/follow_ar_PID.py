@@ -144,7 +144,7 @@ def odometry_callback(msg):
 
 			hour=time.strftime("%Ih%Mm%Ss")
 
-			speedLog.write(hour+" --- "+str(Speed)+"\n")
+			#speedLog.write(hour+" --- "+str(Speed)+"\n")
 			#speedLog.write("Dt:"+ str(posTime-lastPosTime) +"\n")
 			print("Speed: ",Speed)
 
@@ -204,7 +204,7 @@ def updatePosition(posX,posY,posZ):
 	currentPosition=(posX, posY, posZ)
 
 	hour=time.strftime("%Ih%Mm%Ss")
-	posLog.write(hour+" --- "+str(currentPosition)+"\n")
+	#posLog.write(hour+" --- "+str(currentPosition)+"\n")
 
 	"""print("pos")
 	print (currentPosition)
@@ -284,7 +284,7 @@ if __name__=="__main__":
 	else:
 		name=str(sys.argv[1])
 
-	init_log_file()
+	#init_log_file()
 
 	name = 'bebop2'
 	#Topics init
@@ -364,7 +364,7 @@ if __name__=="__main__":
 			pub.publish(twist)
 			pubLand.publish()
 			print("Land!")
-			close_log_file()   		
+			#close_log_file()   		
 			termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
 	else:
 		print("No start")

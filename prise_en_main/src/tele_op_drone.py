@@ -11,14 +11,14 @@ msg= """Test
 	test? 
 	"""
 mvtBindings = {
-		'z':(0.2,0,0,0),
-		's':(-0.2,0,0,0),
-		'q':(0,0.2,0,0),
-		'd':(0,-0.2,0,0),
-		'j':(0,0,0,0.2),
-		'l':(0,0,0,-0.2),
-		'i':(0,0,0.2,0),
-		'k':(0,0,-0.2,0),
+		'z':(0.5,0,0,0),
+		's':(-0.5,0,0,0),
+		'q':(0,0.5,0,0),
+		'd':(0,-0.5,0,0),
+		'j':(0,0,0,0.5),
+		'l':(0,0,0,-0.5),
+		'i':(0,0,0.5,0),
+		'k':(0,0,-0.5,0),
 	       }
 
 currentPosition=(0.0,0.0,0.0)
@@ -31,7 +31,7 @@ def getKey():
 	key = sys.stdin.read(1)
 	termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
 	return key
-
+"""
 def odometry_callback(msg):
 	global currentPosition
 	global OdomlastPosition
@@ -60,16 +60,16 @@ def odometry_callback(msg):
 	pubPos.publish(p)
 
 	OdomlastPosition=(odomOnX,odomOnY,odomOnZ)
-
+"""
 
 if __name__=="__main__":
     	settings = termios.tcgetattr(sys.stdin)
 	
-	pub = rospy.Publisher('/bebop1/cmd_vel', Twist, queue_size = 1)
-	pubTakeoff = rospy.Publisher('/bebop1/takeoff', Empty, queue_size = 1)
-	pubLand = rospy.Publisher('/bebop1/land', Empty, queue_size = 1)
+	pub = rospy.Publisher('/bebop/cmd_vel', Twist, queue_size = 1)
+	pubTakeoff = rospy.Publisher('/bebop/takeoff', Empty, queue_size = 1)
+	pubLand = rospy.Publisher('/bebop/land', Empty, queue_size = 1)
 	
-	pubPos = rospy.Publisher('/bebop1_Pos', Point, queue_size = 1)
+	#pubPos = rospy.Publisher('/bebop_Pos', Point, queue_size = 1)
 	rospy.init_node('teleop_test', anonymous= True)
 	
 	start = raw_input("Take off? ")
@@ -78,7 +78,7 @@ if __name__=="__main__":
 		print("Take off")
 		pubTakeoff.publish()
 
-		sub_odom = rospy.Subscriber("/bebop1/odom", Odometry, odometry_callback)
+		#sub_odom = rospy.Subscriber("/bebop/odom", Odometry, odometry_callback)
 		
 		x = 0.0
 		y = 0.0
